@@ -75,7 +75,6 @@ AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
 ############## DON'T FORGET TO DELETE THIS ###############
 
-    )
 
 ############## DELETE UNTIL HERE ###############
 
