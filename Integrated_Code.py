@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
 import streamlit as st
 from azure.core.credentials import AzureKeyCredential
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -73,12 +79,15 @@ model = AzureChatOpenAI(
             azure_deployment="Thruxton_R",
             api_version='2024-03-01-preview',temperature = 0.0)
 
+#Initializing some variables for Devices
 if not hasattr(st.session_state, 'display_history_devices'):
     st.session_state.display_history_devices = []
 if not hasattr(st.session_state, 'context_history_devices'):
     st.session_state.context_history_devices = []
 if not hasattr(st.session_state, 'curr_response'):
     st.session_state.curr_response = ""
+if not hasattr(st.session_state, 'user_question'):
+    st.session_state.user_question = None 
 ####################################################################################################################----------------Copilot-------------------#####################################################################################################
 
 Copilot_Sentiment_Data  = pd.read_csv("Cleaned_Combined_Data.csv")
@@ -596,10 +605,7 @@ def get_conversational_chain_quant_classify2_compare():
                             1. Compare aspect wise sentiment of different Product Families / Compare different AI models / Compare aspect wise sentiment of different AI models:
                             
                                 Follow this same template whenever user asks for compare different AI models across Geography, make sure to change all the aspects to Geography
-                                
-                            
-                            
-                            
+
                                   WITH NetSentiment AS (
                                                            SELECT 
                                                                 PRODUCT_FAMILY, 
@@ -658,33 +664,39 @@ def get_conversational_chain_quant_classify2_compare():
                                                         ORDER BY 
                                                             Review_Count DESC;
                                                             
-                            2. IMPORTANT : If user question is specific to any attributes/Features/Aspects, we do not need the Overall sentiment in the SQL Query.
-                        
-                        
-                            WITH NETSENTIMENT AS (
-                                                    SELECT
-                                                        PRODUCT,
-                                                        ASPECT,
-                                                        ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT,
-                                                        SUM(REVIEW_COUNT) AS REVIEW_COUNT
-                                                    FROM
-                                                        Copilot_Sentiment_Data
-                                                    WHERE
-                                                        ASPECT LIKE '%ASPECT%'
-                                                    GROUP BY
-                                                        PRODUCT, ASPECT
-                                                )
+                                                    
+                            2. End User UserCase - Comparison of Keywords :
+                            
+                            If a user asks anything regarding "End User Usercase" Aspect, follow the below SQL Query Template.
+                            
+                            IMPORTANT : Compare "net sentiment of different Keywords" in end user use case for different Product Family Names/AI models? - Here the user doesn't want to compare different AI for Paticular Aspect.
+                            User seeks to compare the keywords of particular aspect among the AI models.
+                
+                                WITH NETSENTIMENT AS (
+                                                        SELECT
+                                                            PRODUCT_FAMILY,
+                                                            KEYWORDS,
+                                                            ASPECT,
+                                                            ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT,
+                                                            SUM(REVIEW_COUNT) AS REVIEW_COUNT
+                                                        FROM
+                                                            Copilot_Sentiment_Data
+                                                        WHERE
+                                                            ASPECT = 'End User Usecase'
+                                                        GROUP BY
+                                                            PRODUCT_FAMILY, KEYWORDS, ASPECT
+                                                    )
 
-                                                -- SELECT ONLY THE ASPECT NET SENTIMENTS
-                                                SELECT
-                                                    NS.PRODUCT,
-                                                    NS.ASPECT,
-                                                    NS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
-                                                    NS.REVIEW_COUNT
-                                                FROM
-                                                    NETSENTIMENT NS
-                                                ORDER BY
-                                                    NS.REVIEW_COUNT DESC;
+                                                    -- SELECT ONLY THE ASPECT NET SENTIMENTS WITHOUT ASPECT COLUMN
+                                                    SELECT
+                                                        NS.PRODUCT_FAMILY,
+                                                        NS.KEYWORDS,
+                                                        NS.NET_SENTIMENT AS NET_SENTIMENT_KEYWORDS,
+                                                        NS.REVIEW_COUNT
+                                                    FROM
+                                                        NETSENTIMENT NS
+                                                    ORDER BY
+                                                        NS.REVIEW_COUNT DESC;
 
                         VERY IMPORTANT : For Comparision, Always give the Product_Family/Product column along with aspect or geography in the SQL Query
                     
@@ -1385,42 +1397,41 @@ def get_conversational_chain_generic():
     global history
     try:
         prompt_template = """
-        You are an AI ChatBot with access to data on Copilot products and their competitors, including 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', and 'Perplexity AI'. Generate responses based only on this dataset according to the following instructions:
-
+        You are an AI ChatBot where you will get the data of Copilot products and its competitors like 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI' and you should generate the response based on that Dataset only for user question by following the below instructions.
         Context Interpretation:
         1. Recognize abbreviations for country names (e.g., 'DE' for Germany, 'USA' for the United States).
         2. Understand product family names even if written in reverse order or with missing words.
-        3. Summarize attributes of a product (e.g., "Summarize the attributes of Microsoft Copilot Pro in the USA") by relating attributes to the corresponding dataset columns:
-            - Attributes: Aspect
-            - Product: Product_Family
-            - Location: Geography
-        4. Provide responses based strictly on the provided dataset, focusing on Copilot products and their specified competitors.
+        3. If the user asks to summarize attributes of a product (e.g., "Summarize the attributes of Microsoft Copilot Pro in the USA"), relate the attributes to the corresponding dataset columns and provide the response accordingly.
+            For example:
+            Attributes: Aspect
+            Product: Product_Family
+            Location: Geography
+            Based on these relations, generate the summary using the relevant data from the dataset.
 
+        Data Utilization:
+        IMPORTANT: 1. Use only the provided dataset for generating responses.
+        IMPORTANT: 2. Do not use or rely on pre-trained information other than Given Copilot Product Data and its Competitor Data like 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI' which is given in Dataset. Limit Yourself to data you are provided with.
+        IMPORTANT :3. Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'. If user asks about competitor you should able to give response for competitors mentioned before.
+        
         Dataset Columns:
-        - Review: User opinions and experiences with different product families across geographies, indicating customer satisfaction or areas for improvement.
-        - Data_Source: Platform from which the reviews were collected (e.g., Reddit, Play Store, App Store, Tech Websites, YouTube).
-        - Geography: Countries of the users providing reviews, enabling regional analysis of preferences and perceptions.
-        - Product_Family: Categories of products reviewed, allowing comparisons and trend analysis across families like 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile', 'Edge Copilot', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'.
-        - Sentiment: Overall tone of the review (positive, negative, neutral), crucial for gauging customer sentiment.
-        - Aspect: Specific features or attributes discussed in the review, highlighting strengths or concerns.
-
+        Review: This column contains the opinions and experiences of users regarding different product families across geographies, providing insights into customer satisfaction or complaints and areas for improvement.
+        Data_Source: This column indicates the platform from which the user reviews were collected, such as Reddit, Play Store, App Store, Tech Websites, or YouTube videos.
+        Geography: This column lists the countries of the users who provided the reviews, allowing for an analysis of regional preferences and perceptions of the products.
+        Product_Family: This column identifies the broader category of products to which the review pertains, enabling comparisons and trend analysis across different product families like 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'.       
+        Sentiment: This column reflects the overall tone of the review, whether positive, negative, or neutral, and is crucial for gauging customer sentiment.
+        Aspect: This column highlights the particular features or attributes of the product that the review discusses, pinpointing areas of strength or concern.
+        
         Tasks:
-        1. Review Summarization: Summarize reviews by filtering relevant Aspect, Geography, Product_Family, Sentiment, or Data_Source. Provide insights based on available reviews and sentiments. Based on the name of you get for summary you need to summarize the reviews of their mentioned data.
+        1. Review Summarization: Summarize reviews by filtering relevant Aspect, Geography, Product_Family, Sentiment, or Data_Source. Provide insights based on available reviews and sentiments.
         2. Aspect Comparison: Summarize comparisons for overlapping features between product families or geographies. Highlight key differences with positive and negative sentiments.
         3. New Feature Suggestion/Recommendation: Generate feature suggestions or improvements based on the frequency and sentiment of reviews and mentioned aspects. Provide detailed responses by analyzing review sentiment and specific aspects.
         4. Hypothetical Reviews: Create hypothetical reviews for feature updates or new features, simulating user reactions. Include realistic reviews with all types of sentiments. Provide solutions for negative hypothetical reviews.
-        5. Identify Top Keywords: Provide top 4 keywords related to end user use cases, based on the frequency and context of the reviews.
-
-        Response Criteria:
-        - Minimum of 300 words.
-        - Provide as much detail as possible.
-        - Generate accurate responses without extra information.
-
+        5. Response Criteria: Minimum of 300 words. Provide as much detail as possible. Generate accurate responses without extra information.
+        
         Understanding User Queries:
-        1. Carefully read and understand the user's question.
+        1. Carefully read and understand the full user's question.
         2. If the question is outside the scope of the dataset, respond with: "Sorry! I do not have sufficient information. Can you provide more details?"
-        3. Respond accurately based on the provided data on Copilot products and competitors like 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'.
-        Following is the previous conversation from User and Response, use it to get context only:""" + str(history) + """\n
+        3. Respond accurately based on the provided Copilot Products and its Competitors like 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'. Following is the previous conversation from User and Response, use it to get context only:""" + str(history) + """\n
                 Use the above conversation chain to gain context if the current prompt requires context from previous conversation.\n
         Context:\n {context}?\n
         Question: \n{question}\n
@@ -1434,8 +1445,9 @@ def get_conversational_chain_generic():
     except Exception as e:
         err = f"An error occurred while getting conversation chain for detailed review summarization: {e}"
         return err
-      
-
+        
+        
+        
 def query_detailed_generic(user_question, vector_store_path="combine_indexes"):
     try:
         embeddings = AzureOpenAIEmbeddings(azure_deployment="MV_Agusta")
@@ -1788,6 +1800,7 @@ Comparison:
         -What aspects are better in copilot than its competitors?
         -Which AI user feels is the best for [feature]?
         -Best/worst, good/bad, user like/user dislikes, praises/curses everything should be decided based on comparision.
+        - Compare the net sentiment of keyword in end user usercase of different Product Families.
 
 Generic:
 
@@ -1868,7 +1881,7 @@ def get_conversational_chain_detailed_compare():
         
         Example :
         
-        Compare X and Y:
+        Compare X,Y , Z and so on :
         
         
         VERY IMPORTANT : KEEP THE TEMPLATE SAME FOR ALL THE COMPARISION RELATED USER QUESTIONS.
@@ -1895,14 +1908,26 @@ def get_conversational_chain_detailed_compare():
             
             Negative:
             
-            List down all the cons of GY in pointers
+            List down all the cons of Y in pointers
+            
+            Summary of Z:
+
+            Positive:
+
+            List down all the Pros of Z in pointers
 
             
+            Negative:
             
+            List down all the cons of Z in pointers
+            
+            and so on for the rest of the Products.
+
+
             Overall, both X and Y have received positive feedback for their respective aspects However, there are areas for improvement such as (Whatever aspects that needs improvement) . Users appreciate (Aspects that have good net sentiment)
             
             
-            If there are 3 or more Product, follow the same template and provide pros and cons for the same as well.
+            If there are 3 or more Product, follow the same template and provide pros and cons for the others as well.
         
         Give a detailed summary for each aspects using the reviews. Use maximum use of the reviews. Do not use your pretrained data. Use the data provided to you. For each aspects. Summary should be 3 ro 4 lines
         
@@ -2104,6 +2129,8 @@ def identify_columns(data):
         return 'ASPECT'
     elif 'GEOGRAPHY' in a:
         return 'GEOGRAPHY'
+    elif 'KEYWORDS' in a:
+        return 'KEYWORDS'
     else:
         return None
     
@@ -2148,6 +2175,7 @@ def user_ques(user_question_1, user_question, classification, user_question_char
                 print(data_formatted)
                 column_found = identify_columns(data_formatted)
                 print(column_found)
+                dataframe_as_dict = data_formatted.to_dict(orient='records')
                
                 try:
                     try:
@@ -2208,7 +2236,7 @@ def user_ques(user_question_1, user_question, classification, user_question_char
                 save_list(history) 
             except:
                 try:
-                    comparision_summary = query_detailed_compare(user_question + "Which have the following sentiment data" + str(e))
+                    comparision_summary = query_detailed_compare(user_question + "Which have the following sentiment data" + str(dataframe_as_dict))
                     st.write(comparision_summary)
                     full_response += comparision_summary
                     history = check_history_length(history,comparision_summary)
@@ -2377,6 +2405,7 @@ if __name__ == "__main__":
             # st.session_state['messages'] = []
             # st.session_state['chat_initiated'] = False
             st.header("Copilot Review Synthesis Tool")
+            st.session_state.user_question = None #Resetting this variable for Devices, do not delete
             if "messages" not in st.session_state:
                 st.session_state['messages'] = []
             if "chat_initiated" not in st.session_state:
@@ -2664,16 +2693,18 @@ if __name__ == "__main__":
                                     generate_chart(response)
                                 else:
                                     st.write(response)
-                                    st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})                           
+                                    st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})
                     else:
                         Gen_Ans = query_devices_detailed_generic(st.session_state.user_question)
                         st.write(Gen_Ans)
-                        full_response += Gen_Ans
-                        
-                    st.session_state.messages.append({"role": "assistant", "content": full_response, "is_html": True})
+                        save_history_devices(Gen_Ans)
+                        st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
                 st.session_state['chat_initiated'] = True
             if st.session_state['chat_initiated'] and st.button("New Chat"):
                 st.session_state['messages'] = []
                 st.session_state['chat_initiated'] = False
+                st.session_state.user_question = None
+                st.session_state.display_history_devices = []
+                st.session_state.context_history_devices = []
+                st.session_state.curr_response = ""
                 st.experimental_rerun()
-
