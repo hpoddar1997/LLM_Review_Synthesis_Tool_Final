@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import streamlit as st
 from azure.core.credentials import AzureKeyCredential
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -73,26 +67,18 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
-############## DON'T FORGET TO DELETE THIS ###############
-
-
-############## DELETE UNTIL HERE ###############
-
 
 global model
 model = AzureChatOpenAI(
             azure_deployment="Thruxton_R",
             api_version='2024-03-01-preview',temperature = 0.0)
 
-#Initializing some variables for Devices
 if not hasattr(st.session_state, 'display_history_devices'):
     st.session_state.display_history_devices = []
 if not hasattr(st.session_state, 'context_history_devices'):
     st.session_state.context_history_devices = []
 if not hasattr(st.session_state, 'curr_response'):
     st.session_state.curr_response = ""
-if not hasattr(st.session_state, 'user_question'):
-    st.session_state.user_question = None 
 ####################################################################################################################----------------Copilot-------------------#####################################################################################################
 
 Copilot_Sentiment_Data  = pd.read_csv("Cleaned_Combined_Data.csv")
@@ -1705,11 +1691,11 @@ def classify(user_question):
 
 from openai import AzureOpenAI
 
-# client = AzureOpenAI(
-#     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
-#     api_version="2024-02-01",
-#     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-#     )
+client = AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+    api_version="2024-02-01",
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    )
     
 deployment_name='Surface_Analytics'
 
@@ -2391,7 +2377,6 @@ if __name__ == "__main__":
             # st.session_state['messages'] = []
             # st.session_state['chat_initiated'] = False
             st.header("Copilot Review Synthesis Tool")
-            st.session_state.user_question = None #Resetting this variable for Devices, do not delete
             if "messages" not in st.session_state:
                 st.session_state['messages'] = []
             if "chat_initiated" not in st.session_state:
@@ -2679,18 +2664,16 @@ if __name__ == "__main__":
                                     generate_chart(response)
                                 else:
                                     st.write(response)
-                                    st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})
+                                    st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})                           
                     else:
                         Gen_Ans = query_devices_detailed_generic(st.session_state.user_question)
                         st.write(Gen_Ans)
-                        save_history_devices(Gen_Ans)
-                        st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
+                        full_response += Gen_Ans
+                        
+                    st.session_state.messages.append({"role": "assistant", "content": full_response, "is_html": True})
                 st.session_state['chat_initiated'] = True
             if st.session_state['chat_initiated'] and st.button("New Chat"):
                 st.session_state['messages'] = []
                 st.session_state['chat_initiated'] = False
-                st.session_state.user_question = None
-                st.session_state.display_history_devices = []
-                st.session_state.context_history_devices = []
-                st.session_state.curr_response = ""
                 st.experimental_rerun()
+
