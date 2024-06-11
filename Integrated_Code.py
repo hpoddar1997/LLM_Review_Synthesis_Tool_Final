@@ -88,6 +88,8 @@ if not hasattr(st.session_state, 'curr_response'):
     st.session_state.curr_response = ""
 if not hasattr(st.session_state, 'user_question'):
     st.session_state.user_question = None 
+if not hasattr(st.session_state, 'devices_flag'):
+    st.session_state.devices_flag = False
 ####################################################################################################################----------------Copilot-------------------#####################################################################################################
 
 Copilot_Sentiment_Data  = pd.read_csv("Cleaned_Combined_Data.csv")
@@ -2404,7 +2406,7 @@ if __name__ == "__main__":
         if selected_options == "Copilot":
             # st.session_state['messages'] = []
             # st.session_state['chat_initiated'] = False
-            devices_flag = False #Created this flag to reset the history for devices. Please do not delete this.
+            st.session_state.devices_flag = False #Created this flag to reset the history for devices. Please do not delete this.
             st.header("Copilot Review Synthesis Tool")
             st.session_state.user_question = None #Resetting this variable for Devices, do not delete
             if "messages" not in st.session_state:
@@ -2467,12 +2469,12 @@ if __name__ == "__main__":
         
         elif selected_options == "Devices":
             st.header("Devices Review Synthesis Tool")
-            if not devices_flag:
+            if not st.session_state.devices_flag:
                 st.session_state.display_history_devices = []
                 st.session_state.context_history_devices = []
                 st.session_state.curr_response = ""
                 st.session_state.user_question = None
-                devices_flag = True
+                st.session_state.devices_flag = True
             if "chat_initiated" not in st.session_state:
                 st.session_state['chat_initiated'] = False
             for message in st.session_state.display_history_devices:
