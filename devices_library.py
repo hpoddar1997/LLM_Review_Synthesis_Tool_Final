@@ -1648,11 +1648,11 @@ def device_summarization(user_input):
             new_inp_check = False
             old_inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ = st.session_state.past_inp
         min_date, max_date = get_date_range(device_name)
-         
-         #Debug Image link issue for devices
-         st.write(f"Image link: {img_link}")
         
-         html_code = f"""
+        #Debug image link error:
+        st.write(f"Image link for {device_name}: {img_link}")
+        
+        html_code = f"""
         <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center;">
             <div style="flex: 1; text-align: center;">
                 <img src="data:image/jpeg;base64,{base64.b64encode(open(img_link, "rb").read()).decode()}"  style="width: 150px; display: block; margin: 0 auto;">
