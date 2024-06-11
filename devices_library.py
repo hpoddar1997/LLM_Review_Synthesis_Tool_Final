@@ -463,7 +463,10 @@ def get_device_image(user_input):
         #Debugging:
         st.write(f"Image Path: {img_path}")
         if not os.path.exists(img_path):
-            img_path = None
+            st.write(f"{img_path} path does not exist")
+            img_not_found = "IMAGE NOT FOUND"
+            img_path = os.path.join(img_folder, f"{img_not_found}.JPG")
+            st.write(f"New image path: {img_path}")
     except:
         img_path = None
         #Debugging:
