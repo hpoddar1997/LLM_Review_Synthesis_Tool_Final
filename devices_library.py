@@ -451,20 +451,38 @@ def get_sentiment_device_name(input_device):
         print(f"Error in getting sentiment device name for {input_device}")
     return sentiment_device_name
 
-
-    
+#Debugging device image
 def get_device_image(user_input):
     dev = user_input
     try:
         # Assuming the images are in a folder named 'Device Images'
         img_folder = 'Device Images'
+        #Debugging:
+        st.write(f"Image Folder: {img_folder}\nDevice Name: {dev}")
         img_path = os.path.join(img_folder, f"{dev}.jpg")
+        #Debugging:
+        st.write(f"Image Path: {img_path}")
         if not os.path.exists(img_path):
             img_path = None
     except:
         img_path = None
+        #Debugging:
+        st.write(f"Error occured in getting device image")
         print(f"Error in getting device image for {user_input}")
     return (dev, img_path)
+    
+# def get_device_image(user_input):
+#     dev = user_input
+#     try:
+#         # Assuming the images are in a folder named 'Device Images'
+#         img_folder = 'Device Images'
+#         img_path = os.path.join(img_folder, f"{dev}.jpg")
+#         if not os.path.exists(img_path):
+#             img_path = None
+#     except:
+#         img_path = None
+#         print(f"Error in getting device image for {user_input}")
+#     return (dev, img_path)
     
 def get_net_sentiment(device_name):
     SQL_Query = f"""SELECT 'TOTAL' AS Aspect, 
