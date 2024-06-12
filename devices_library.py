@@ -1652,7 +1652,7 @@ def device_summarization(user_input):
         min_date, max_date = get_date_range(device_name)
         
         #Debug image link error:
-        st.write(f"Image link for {device_name}: {img_link}")
+        # st.write(f"Image link for {device_name}: {img_link}")
         
         html_code = f"""
         <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center;">
