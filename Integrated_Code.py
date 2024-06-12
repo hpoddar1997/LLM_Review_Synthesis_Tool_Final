@@ -91,6 +91,8 @@ if not hasattr(st.session_state, 'user_question'):
     st.session_state.user_question = None 
 if not hasattr(st.session_state, 'devices_flag'):
     st.session_state.devices_flag = False
+if not hasattr(st.session_state, 'devices_approach'):
+    st.session_state.devices_approach = ""
 ####################################################################################################################----------------Copilot-------------------#####################################################################################################
 
 Copilot_Sentiment_Data  = pd.read_csv("Cleaned_Combined_Data.csv")
@@ -2475,29 +2477,33 @@ if __name__ == "__main__":
                 if st.sidebar.subheader("Select an option"):
                     options = ["Approach1", "Approach2"]
                     selected_options = st.sidebar.selectbox("Select approach", options)
+                    if not st.session_state.devices_flag:
+                        st.session_state.display_history_devices = []
+                        st.session_state.context_history_devices = []
+                        st.session_state.curr_response = ""
+                        st.session_state.user_question = None
+                        st.session_state.devices_flag = True
+                    if "chat_initiated" not in st.session_state:
+                        st.session_state['chat_initiated'] = False
+                    for message in st.session_state.display_history_devices:
+                        with st.chat_message(message["role"]):
+                            if message["role"] == "assistant" and "is_html" in message and message["is_html"]:
+                                st.markdown(message["content"], unsafe_allow_html=True)
+                            else:
+                                st.markdown(message["content"])
+                    if user_inp := st.chat_input("Enter the Prompt: "):
+                        st.chat_message("user").markdown(user_inp)
+                        st.session_state.display_history_devices.append({"role": "user", "content": user_inp, "is_html": False})
+                        st.session_state.user_question = user_inp
                     if selected_options == "Approach1":
                         
 ##########################################    APPROACH 1    #########################################################################
-                        if not st.session_state.devices_flag:
-                            st.session_state.display_history_devices = []
-                            st.session_state.context_history_devices = []
+                        if st.session_state.devices_approach != "Approach1":
                             st.session_state.curr_response = ""
                             st.session_state.user_question = None
-                            st.session_state.devices_flag = True
-                        if "chat_initiated" not in st.session_state:
-                            st.session_state['chat_initiated'] = False
-                        for message in st.session_state.display_history_devices:
-                            with st.chat_message(message["role"]):
-                                if message["role"] == "assistant" and "is_html" in message and message["is_html"]:
-                                    st.markdown(message["content"], unsafe_allow_html=True)
-                                else:
-                                    st.markdown(message["content"])
-                        if user_inp := st.chat_input("Enter the Prompt: "):
-                            st.chat_message("user").markdown(user_inp)
-                            st.session_state.display_history_devices.append({"role": "user", "content": user_inp, "is_html": False})
-                            st.session_state.user_question = user_inp
-                        if st.session_state.user_question:   
-                        #if user_question := st.chat_input("Enter the Prompt: "):
+                            st.session_state.devices_approach = "Approach1"
+                        
+                        if st.session_state.user_question:
                             with st.chat_message("assistant"):
                                 classification = identify_prompt(st.session_state.user_question)
                                 if classification == 'summarization':
@@ -2913,24 +2919,10 @@ if __name__ == "__main__":
                             st.experimental_rerun()
                             
                     elif selected_options == "Approach2":
-                        if not st.session_state.devices_flag:
-                            st.session_state.display_history_devices = []
-                            st.session_state.context_history_devices = []
+                        if st.session_state.devices_approach != "Approach2":
                             st.session_state.curr_response = ""
                             st.session_state.user_question = None
-                            st.session_state.devices_flag = True
-                        if "chat_initiated" not in st.session_state:
-                            st.session_state['chat_initiated'] = False
-                        for message in st.session_state.display_history_devices:
-                            with st.chat_message(message["role"]):
-                                if message["role"] == "assistant" and "is_html" in message and message["is_html"]:
-                                    st.markdown(message["content"], unsafe_allow_html=True)
-                                else:
-                                    st.markdown(message["content"])
-                        if user_inp := st.chat_input("Enter the Prompt: "):
-                            st.chat_message("user").markdown(user_inp)
-                            st.session_state.display_history_devices.append({"role": "user", "content": user_inp, "is_html": False})
-                            st.session_state.user_question = user_inp
+                            st.session_state.devices_approach = "Approach2"
                         if st.session_state.user_question:   
                         #if user_question := st.chat_input("Enter the Prompt: "):
                             with st.chat_message("assistant"):
