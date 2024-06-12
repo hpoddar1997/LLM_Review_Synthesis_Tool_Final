@@ -318,7 +318,7 @@ def get_sales_units(device_name):
         data = ps.sqldf(SQL_Query, globals())
         col_name = data.columns[0]
         total_sales = data[col_name][0]
-        total_sales = str(round(total_sales,2)) + "K"
+        total_sales = str(round(total_sales)) + "K"
     except:
         print(f"Error in getting sales units for {device_name}")
         total_sales = "NA"
@@ -398,7 +398,7 @@ def get_highest_selling_specs(device_name):
         col_name2 = data.columns[1]
         specs = data[col_name1][0]
         sales_unit = data[col_name2][0]
-        sales_unit = str(round(sales_unit,2)) + "K"
+        sales_unit = str(round(sales_unit)) + "K"
     except:
         specs = "NA"
         sales_unit = "NA"
@@ -548,7 +548,7 @@ def get_comp_device_details(user_input, df1):
         return user_input, img_path, None, None, None,None  # Return dev and link, but None for sales and ASP if no matching SERIES is found
     
     try:
-        sales = str(round(float(sales_data['SALES_UNITS'].values[0]) / 1000, 2)) + "K"
+        sales = str(round(float(sales_data['SALES_UNITS'].values[0]) / 1000)) + "K"
     except:
         print(f"Error in getting competitor sales data: {user_input}")
         sales = "NA"
