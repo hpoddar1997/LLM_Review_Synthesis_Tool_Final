@@ -48,11 +48,6 @@ client = AzureOpenAI(
      azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
      )
 
-############## DON'T FORGET TO DELETE THIS ###############
-
-
-############## DELETE UNTIL HERE ###############
-
 deployment_name='Surface_Analytics'
 azure_deployment_name = "Thruxton_R"
 azure_embedding_name ="MV_Agusta"
@@ -85,8 +80,8 @@ if not hasattr(st.session_state, 'curr_response'):
 def save_history_devices(summ):
     if not hasattr(st.session_state, 'context_history_devices'):
         st.session_state.context_history_devices = []
-    if len(st.session_state.context_history_devices)>5:
-        st.session_state.context_history_devices = st.session_state.context_history_devices[3:]
+    if len(st.session_state.context_history_devices)>3:
+        st.session_state.context_history_devices = st.session_state.context_history_devices[1:]
     st.session_state.context_history_devices.append(summ)
 
 
@@ -318,7 +313,7 @@ def get_sales_units(device_name):
         data = ps.sqldf(SQL_Query, globals())
         col_name = data.columns[0]
         total_sales = data[col_name][0]
-        total_sales = str(round(total_sales)) + "K"
+        total_sales = str(round(total_sales,2)) + "K"
     except:
         print(f"Error in getting sales units for {device_name}")
         total_sales = "NA"
@@ -398,7 +393,7 @@ def get_highest_selling_specs(device_name):
         col_name2 = data.columns[1]
         specs = data[col_name1][0]
         sales_unit = data[col_name2][0]
-        sales_unit = str(round(sales_unit)) + "K"
+        sales_unit = str(round(sales_unit,2)) + "K"
     except:
         specs = "NA"
         sales_unit = "NA"
@@ -548,7 +543,7 @@ def get_comp_device_details(user_input, df1):
         return user_input, img_path, None, None, None,None  # Return dev and link, but None for sales and ASP if no matching SERIES is found
     
     try:
-        sales = str(round(float(sales_data['SALES_UNITS'].values[0]) / 1000)) + "K"
+        sales = str(round(float(sales_data['SALES_UNITS'].values[0]) / 1000, 2)) + "K"
     except:
         print(f"Error in getting competitor sales data: {user_input}")
         sales = "NA"
@@ -1008,6 +1003,7 @@ IMPORTANT : If a user is asking about which is best/poor, everything should be b
                 
                 
                 IMPORTANT: If the user is asking "Give or calculate net sentiment of Inspiron, the user means the product family Inspiron.
+                IMPORTANT: In the SQL Queries, always use ORDER BY REVIEW COUNT DESC in all cases
             
                     1. If the user asks for count of column 'X', the query should be like this:
                             SELECT COUNT(DISTINCT ('X')) 
@@ -1020,7 +1016,7 @@ IMPORTANT : If a user is asking about which is best/poor, everything should be b
                     3. If the user asks for Net overall sentiment the query should be like this:
                             SELECT ((SUM(Sentiment_Score))/(SUM(Review_Count))) * 100 AS Net_Sentiment,  SUM(Review_Count) AS Review_Count
                             FROM Devices_Sentiment_Data 
-                            ORDER BY Net_Sentiment DESC
+                            ORDER BY Review_Count DESC
 
                     4. If the user asks for Net Sentiment for column "X", the query should be exactly like this: 
 
@@ -1159,6 +1155,7 @@ def query_quant_classify2_devices(user_question, vector_store_path="faiss_index_
             pass
         return data_1
     except Exception as e:
+        st.write(e)
         
         err = f"An error occurred while generating response for Quantify: {e}"
         return err
@@ -1595,6 +1592,7 @@ def comparison_view(device1, device2):
         
 def identify_devices(input_string):
     # First, check if any device in the Sales Data and Sentiment data is exactly in the input string
+    input_string = input_string.upper()
     devices_list_sentiment = list(Devices_Sentiment_Data['Product_Family'].unique())
     for device in devices_list_sentiment:
         if device in input_string:
@@ -1652,7 +1650,7 @@ def device_summarization(user_input):
         min_date, max_date = get_date_range(device_name)
         
         #Debug image link error:
-        # st.write(f"Image link for {device_name}: {img_link}")
+        #st.write(f"Image link for {device_name}: {img_link}")
         
         html_code = f"""
         <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center;">
@@ -1781,7 +1779,7 @@ def identify_prompt(user_question):
         You are an AI Chatbot assistant. Carefully understand the user's question and follow these instructions to categorize their query into one of 5 features.
 
         Features:
-            Summarization, Comparison, Others
+            Summarization, Comparison, Quant, Sales, Other
 
         Instructions:
 
@@ -1804,20 +1802,31 @@ def identify_prompt(user_question):
                 -Choose this if exactly two or more Product Families or devices or laptops are mentioned.                
                 
         Quant: 
-        -Choose this if the prompt seeks a quantitative or numerical answer around net sentiment or review count for different product families or geographies
+        -Choose this if the prompt seeks a quantitative or numerical answer around net sentiment or review count for different product families or geographies or a particular product family
+         Provides data retrieval and visualization for any Product Family around different features like aspects or different geographies
+         IMPORTANT : If there are any type of questions involving any quantitative answer, you should select this category.
+         
+         IMPORTANT : If the user asks incomplete questions like aspect wise net sentiment of any laptop etc without explicitly mentioning "calculate or "give me" , then also you should select this category.
+         Whenver user asks about any top or bottom aspects or other things like keywords choose this category
+         
         (e.g., "Calculate the net sentiment for different product families",
                    "What is the net sentiment for different geographies of product_family "A"?"
-                   "What is the net sentiment across different aspects of device "X"?" etc.)
+                   "What is the net sentiment across different aspects of device "X"?"
+                   "Give me net sentiment of different aspects of Laptop A?"
+                   "What is the aspect wise net sentiment for product family 'X' ? etc.)
         
-        Sales: Choose this if the prompt seeks a quantitative or numerical answer around net sales or net sales units or average sales price for different product families or geographies
-                (e.g., "Calculate the net sales for different product families",
-                           "What is the net sales for different geographies of product_family "A"?
-                           "What is the average sales price across different aspects of device "X"? etc.)
+        Sales: Choose this if the prompt seeks a quantitative or numerical answer around net sales or net sales units or average sales price for different product families or geographies.
+               If user is asking any quantitative questions involving sales, you should select this category.
+               
+        (e.g., "Calculate the net sales for different product families",
+                "What is the net sales for different geographies of product_family "A"?
+                "What is the average sales price across different aspects of device "X"? etc.)
                 
 
-        Generic:
+        Other:
 
                 -Choose this for general questions about any Product Family or Device or Laptop.
+                - If the user asks about top or bottom aspects, don't select this category, select Quant category
                 -Choose this for queries about pros and cons, common complaints, top features or verbatims.
                 -Choose this, if the question ask to summarize reviews for a particular feature and not a particular device or laptop or Product Family.
                 
@@ -2317,3 +2326,588 @@ def query_quant_classify2_compare_devices(user_question, vector_store_path="comb
     except Exception as e:
         err = f"An error occurred while generating response for quantitative review summarization: {e}"
         return err
+    
+    
+    
+def custom_color_gradient_compare_devices(val, vmin=-100, vmax=100):
+    green_hex = '#347c47'
+    middle_hex = '#dcdcdc'
+    lower_hex = '#b0343c'
+    # Adjust the normalization to set the middle value as 0
+    try:
+        # Normalize the value to be between -1 and 1 with 0 as the midpoint
+        normalized_val = (int(val) - vmin) / (vmax - vmin) * 2 - 1
+    except:
+        normalized_val = 0
+    if normalized_val <= 0:
+        # Interpolate between lower_hex and middle_hex for values <= 0
+        r = int(np.interp(normalized_val, [-1, 0], [int(lower_hex[1:3], 16), int(middle_hex[1:3], 16)]))
+        g = int(np.interp(normalized_val, [-1, 0], [int(lower_hex[3:5], 16), int(middle_hex[3:5], 16)]))
+        b = int(np.interp(normalized_val, [-1, 0], [int(lower_hex[5:7], 16), int(middle_hex[5:7], 16)]))
+    else:
+        # Interpolate between middle_hex and green_hex for values > 0
+        r = int(np.interp(normalized_val, [0, 1], [int(middle_hex[1:3], 16), int(green_hex[1:3], 16)]))
+        g = int(np.interp(normalized_val, [0, 1], [int(middle_hex[3:5], 16), int(green_hex[3:5], 16)]))
+        b = int(np.interp(normalized_val, [0, 1], [int(middle_hex[5:7], 16), int(green_hex[5:7], 16)]))
+    # Convert interpolated RGB values to hex format for CSS color styling
+    hex_color = f'#{r:02x}{g:02x}{b:02x}'
+    return f'background-color: {hex_color}; color: black;'
+has context menu
+    
+    
+def devices_quant_approach1(user_question_final):
+#     user_question_final=st.session_state.user_question.upper().replace("LAPTOP","")
+#     user_question_final=user_question_final.replace("DEVICE","")
+    device = identify_devices(user_question_final)
+
+#################################################################################################################################
+    if device == "Device not available":
+        try:
+            data= quantifiable_data_devices(user_question_final)
+            if 'NET_SENTIMENT' in data.columns:
+                    overall_net_sentiment=data['NET_SENTIMENT'][0]
+                    overall_net_sentiment = round(overall_net_sentiment, 1)
+                    overall_review_count=data['REVIEW_COUNT'][0]
+                    overall_review_count = round(overall_review_count)
+        except:
+            print(f"Cannot generate quantitative output for {user_question_final}")
+            
+        words = user_question_final.lower().split()
+        target_words = ['visual', 'visualize', 'graph', 'chart', 'visualization']
+        
+        try:
+            if any(word in words for word in target_words):
+                #st.write("for visual")
+                visual_data=data.copy()
+                numerical_cols = visual_data.select_dtypes(include='number').columns
+                visual_data[numerical_cols] = visual_data[numerical_cols].apply(lambda x: x.round(1) if x.dtype == 'float' else x)
+                generate_chart(visual_data)
+
+                visual_data = visual_data[~visual_data.applymap(lambda x: x == 'TOTAL').any(axis=1)]
+                generate_chart_insight_llm_devices(str(visual_data))
+
+
+            elif len(data)>0:
+
+                show_output=data.copy()
+                #show_output=data_show.drop(index=0)
+                numerical_cols = data.select_dtypes(include='number').columns
+                data[numerical_cols] = data[numerical_cols].apply(lambda x: x.round(1) if x.dtype == 'float' else x)
+                numerical_cols = show_output.select_dtypes(include='number').columns
+                show_output[numerical_cols] = show_output[numerical_cols].apply(lambda x: x.round(1) if x.dtype == 'float' else x)
+
+                #st.dataframe(show_output)
+
+                #data2=data.copy()
+                #show_output = show_output.replace('Unknown', pd.NA).dropna()
+                        #data2['Impact']=np.where(data2['NET_SENTIMENT']<overall_net_sentiment,'LOW','HIGH')
+                if 'NET_SENTIMENT' in show_output.columns:
+                    conditions = [
+                      show_output['NET_SENTIMENT'] < overall_net_sentiment,
+                      show_output['NET_SENTIMENT'] == overall_net_sentiment
+                                 ]
+
+                    choices = [
+                                'LOW',
+                                ' '
+                                 ]
+
+                    show_output['Impact'] = np.select(conditions, choices, default='HIGH')
+    #                             st.write("after impact calculation")    
+    #                             st.write(show_output)
+
+
+
+                #st.dataframe(data2)
+                dataframe_as_dict = show_output.to_dict(orient='records')
+
+                try:
+                    user_question_final = user_question_final.replace("What is the", "Summarize reviews of")
+                except:
+                    pass
+                if 'NET_SENTIMENT' in show_output.columns:
+                    show_output = show_output.drop(index=0)
+                    show_output2=show_output.copy()
+                    show_output2.drop('Impact', axis=1, inplace=True)
+                    #st.write("final dataframe")
+                    show_output2 = show_output2.style.applymap(custom_color_gradient_compare_devices,subset=['NET_SENTIMENT'])
+                    show_output2 = show_output2.set_properties(**{'text-align': 'center'})
+                    st.dataframe(show_output2)
+                    #st.write(show_output2)
+                    show_output2_html = show_output2.to_html(index=False)
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
+                    st.write(f" Overall Net Sentiment is {overall_net_sentiment} for {overall_review_count} reviews.")
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": f" Overall Net Sentiment is {overall_net_sentiment} for {overall_review_count} reviews.", "is_html": False})
+                    qunat_summary = query_detailed_summary2_devices(str(show_output),user_question_final + "Which have the following sentiment data : " + str(show_output),[])
+                    st.write(qunat_summary)
+                    save_history_devices(qunat_summary)
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": qunat_summary, "is_html": False})
+                else:
+                    show_output2=show_output.copy()
+                    #show_output2.drop('Impact', axis=1, inplace=True)
+                    #st.write("final dataframe")
+                    st.write(show_output2)
+                    show_output2_html = show_output2.to_html(index=False)
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
+                    qunat_summary = query_detailed_summary2_devices(str(show_output),user_question_final + "Which have the following sentiment data : " + str(show_output),[])
+                    st.write(qunat_summary)
+                    save_history_devices(qunat_summary)
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": qunat_summary, "is_html": False})
+
+
+                if(len(data))>1:
+                    generate_chart(data)
+            else:
+                st.write(data)      
+        except:
+            st.write(f"Cannot generate quantitative output for the given prompt. Please rephrase and try again!")
+
+##################################################################################################################################
+    else:
+        try:
+            device1 = get_sentiment_device_name(device)
+            if device1:
+                user_question_final=user_question_final.replace(device,device1)
+                data= quantifiable_data_devices(user_question_final)
+
+                if len(data)==0:
+                    Gen_Ans = query_devices_detailed_generic(st.session_state.user_question_final)
+                    st.write(Gen_Ans)
+                    save_history_devices(Gen_Ans)
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
+
+                else:    
+                    if 'NET_SENTIMENT' in data.columns:
+                        overall_net_sentiment=data['NET_SENTIMENT'][0]
+                        overall_net_sentiment = round(overall_net_sentiment, 1)
+                        overall_review_count=data['REVIEW_COUNT'][0]
+                        overall_review_count = round(overall_review_count)
+
+
+                    words = user_question_final.lower().split()
+                    target_words = ['visual', 'visualize', 'graph', 'chart', 'visualization']
+                    if any(word in words for word in target_words):
+                        #st.write("for visual")
+                        visual_data=data.copy()
+                        numerical_cols = visual_data.select_dtypes(include='number').columns
+                        visual_data[numerical_cols] = visual_data[numerical_cols].apply(lambda x: x.round(1) if x.dtype == 'float' else x)
+                        generate_chart(visual_data)
+
+                        visual_data = visual_data[~visual_data.applymap(lambda x: x == 'TOTAL').any(axis=1)]
+                        generate_chart_insight_llm_devices(str(visual_data))
+
+                    elif len(data)>0:
+
+                        show_output=data.copy()
+                        #show_output=data_show.drop(index=0)
+                        numerical_cols = data.select_dtypes(include='number').columns
+                        data[numerical_cols] = data[numerical_cols].apply(lambda x: x.round(1) if x.dtype == 'float' else x)
+                        numerical_cols = show_output.select_dtypes(include='number').columns
+                        show_output[numerical_cols] = show_output[numerical_cols].apply(lambda x: x.round(1) if x.dtype == 'float' else x)
+
+                        #st.dataframe(show_output)
+
+                        #data2=data.copy()
+                        #show_output = show_output.replace('Unknown', pd.NA).dropna()
+                        #data2['Impact']=np.where(data2['NET_SENTIMENT']<overall_net_sentiment,'LOW','HIGH')
+                        if 'NET_SENTIMENT' in show_output.columns:
+                            conditions = [
+                              show_output['NET_SENTIMENT'] < overall_net_sentiment,
+                              show_output['NET_SENTIMENT'] == overall_net_sentiment
+                                         ]
+
+                            choices = [
+                                        'LOW',
+                                        ' '
+                                         ]
+
+                            show_output['Impact'] = np.select(conditions, choices, default='HIGH')
+    #                                     st.write("after impact calculation")    
+    #                                     st.write(show_output)
+
+
+
+                        #st.dataframe(data2)
+                        dataframe_as_dict = show_output.to_dict(orient='records')
+
+                        try:
+                            user_question_final = user_question_final.replace("What is the", "Summarize reviews of")
+                        except:
+                            pass
+                        if 'NET_SENTIMENT' in show_output.columns:
+                            show_output = show_output.drop(index=0)
+                            show_output2=show_output.copy()
+                            show_output2.drop('Impact', axis=1, inplace=True)
+                            #st.write("final dataframe
+                            show_output2 = show_output2.style.applymap(custom_color_gradient_compare_devices,subset=['NET_SENTIMENT'])
+                            show_output2 = show_output2.set_properties(**{'text-align': 'center'})
+                            st.dataframe(show_output2)
+                            #st.write(show_output2)
+                            show_output2_html = show_output2.to_html(index=False)
+                            st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
+                            st.write(f" Overall Net Sentiment is {overall_net_sentiment} for {overall_review_count} reviews.")
+                            st.session_state.display_history_devices.append({"role": "assistant", "content": f" Overall Net Sentiment is {overall_net_sentiment} for {overall_review_count} reviews.", "is_html": False})
+                            qunat_summary = query_detailed_summary2_devices(str(show_output),user_question_final + "Which have the following sentiment data : " + str(show_output),[])
+                            st.write(qunat_summary)
+                            save_history_devices(qunat_summary)
+                            st.session_state.display_history_devices.append({"role": "assistant", "content": qunat_summary, "is_html": False})
+                        else:
+                            show_output2=show_output.copy()
+                            #show_output2.drop('Impact', axis=1, inplace=True)
+                            #st.write("final dataframe")
+                            st.write(show_output2)
+                            show_output2_html = show_output2.to_html(index=False)
+                            st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
+                            qunat_summary = query_detailed_summary2_devices(str(show_output),user_question_final + "Which have the following sentiment data : " + str(show_output),[])
+                            st.write(qunat_summary)
+                            save_history_devices(qunat_summary)
+                            st.session_state.display_history_devices.append({"role": "assistant", "content": qunat_summary, "is_html": False})
+
+
+                        if(len(data))>1:
+                            generate_chart(data)
+                    else:
+                        st.write(data)      
+
+            else:                                
+                Gen_Ans = query_devices_detailed_generic(st.session_state.user_question)
+                st.write(Gen_Ans)
+                save_history_devices(Gen_Ans)
+                st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False}) 
+        except:
+            st.write(f"Cannot generate quantitative output for the given prompt. Please rephrase and try again!")
+                
+            
+            
+def sales_quant_approach1(user_question_final):
+    device = identify_devices(user_question_final)
+                                #st.write(device)
+    if device == "Device not available":
+
+##################################################################################################################################
+        #brand_list=list(RCR_Sales_Data['OEMGROUP'].unique())
+        #RCR_Sales_Data['Series'] = RCR_Sales_Data['Series']+RCR_Sales_Data['OEMGROUP']
+        response=query_quant_classify2_sales(user_question_final)
+        if isinstance(response, pd.DataFrame):
+            if 'Month' in response.columns:
+                response['Month']=pd.to_datetime(response['Month'])
+                response=response.sort_values('Month')
+            st.dataframe(response)
+            show_output2_html = response.to_html(index=False)
+            st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
+            insight_sales=generate_chart_insight_llm_devices(response)
+            st.write(insight_sales)
+            generate_chart(response)
+        else:
+            st.write(response)
+            st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})
+
+###################################################################################################################################
+
+    else:
+
+        device1 = get_sales_device_name(device)
+        #st.write(device1)
+        if device1:
+            user_question_final=user_question_final.replace(device,device1)
+
+            #brand_list=list(RCR_Sales_Data['OEMGROUP'].unique())
+#                                 for i in range(len(RCR_Sales_Data)):
+#                                     RCR_Sales_Data['Series'][i]=RCR_Sales_Data['OEMGROUP'][i]+" "+RCR_Sales_Data['Series'][i]
+
+            #RCR_Sales_Data['Series'] = RCR_Sales_Data['Series']+RCR_Sales_Data['OEMGROUP']
+            #st.write(RCR_Sales_Data['Series'].unique)
+#                                 for i in brand_list:
+#                                     if i.upper() in user_question_final:
+#                                         user_question_final=user_question_final.replace(i.upper(),'')
+
+            #st.write(user_question_final)
+            response=query_quant_classify2_sales(user_question_final)
+            if isinstance(response, pd.DataFrame):
+                if 'Month' in response.columns:
+                    response['Month']=pd.to_datetime(response['Month'])
+                    response=response.sort_values('Month')
+                st.dataframe(response)
+                show_output2_html = response.to_html(index=False)
+                st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
+                insight_sales=generate_chart_insight_llm_devices(response)
+                st.write(insight_sales)
+                generate_chart(response)
+            else:
+                st.write(response)
+                st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})           
+            
+            
+
+            
+            
+            
+def generate_chart(df):
+    global full_response
+    # Determine the data types of the columns
+#     if df.shape[0] == 1:
+#         #print("hi")
+#         return
+    df_copy=df.copy()
+    df = df[~df.applymap(lambda x: x == 'TOTAL').any(axis=1)]
+    #st.write("shape of df",df)
+    if df.shape[0] == 1 or (df.shape[0]==2 and (df.iloc[0:1,-1]==df.iloc[1:2,-1])):
+        return
+    
+    
+    if 'REVIEW_COUNT' in df.columns:
+        df.drop('REVIEW_COUNT',axis=1, inplace=True)
+        #st.write(df)
+        
+    try:
+        df=df.drop('Impact',axis=1)
+        df=df.drop('REVIEW_COUNT',axis=1)
+        
+    except:
+        pass
+    num_cols = df.select_dtypes(include=['number']).columns
+    cat_cols = df.select_dtypes(include=['object', 'category']).columns
+    date_cols = df.select_dtypes(include=['datetime']).columns
+    
+    if len(num_cols)>0:
+        for i in range(len(num_cols)):
+            df[num_cols[i]]=round(df[num_cols[i]],1)
+            
+    if len(df.columns)>3:
+        try:
+            cols_to_drop = [col for col in df.columns if df[col].nunique() == 1]
+            df.drop(columns=cols_to_drop, inplace=True)
+        except:
+            pass
+        
+        df=df.iloc[:, :3]
+        
+    num_cols = df.select_dtypes(include=['number']).columns
+    cat_cols = df.select_dtypes(include=['object', 'category']).columns
+    date_cols = df.select_dtypes(include=['datetime']).columns
+    #st.write(num_cols,cat_cols,len(num_cols),len(cat_cols))
+    # Simple heuristic to determine the most suitable chart
+    if len(df.columns)<=2:
+        
+        if len(num_cols) == 1 and len(cat_cols) == 0 and len(date_cols) == 0:
+
+            plt.figure(figsize=(10, 6))
+            sns.histplot(df[num_cols[0]], kde=True)
+            plt.title(f"Frequency Distribution of '{num_cols[0]}'")
+            st.pyplot(plt)
+            # try:
+                # chart = plt.to_html()
+                # full_response += chart
+            # except:
+                # st.write("Error in converting chart to html")
+
+
+        elif len(num_cols) == 2:
+   
+            plt.figure(figsize=(10, 6))
+            sns.scatterplot(x=df[num_cols[0]], y=df[num_cols[1]])
+            plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+            st.pyplot(plt)
+            # try:
+                # chart = plt.to_html()
+                # full_response += chart
+            # except:
+                # st.write("Error in converting chart to html")
+
+
+        elif len(cat_cols) == 1 and len(num_cols) == 1:
+            if df[cat_cols[0]].nunique() <= 5 and df[num_cols[0]].sum()>=99 and df[num_cols[0]].sum()<=101:
+                fig = px.pie(df, names=cat_cols[0], values=num_cols[0], title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+                st.plotly_chart(fig)
+                # try:
+                    # chart = fig.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+
+            else:
+                num_categories=df[cat_cols[0]].nunique()
+                width = 800
+                height = max(600,num_categories*50)
+                df['Color'] = df[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                bar=px.bar(df,x=num_cols[0],y=cat_cols[0],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'",text=num_cols[0],color='Color')
+                bar.update_traces(textposition='outside', textfont_size=12)
+                bar.update_layout(width=width, height=height)
+                bar.update_layout(showlegend=False)
+                st.plotly_chart(bar)
+                # try:
+                    # chart = bar.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+
+
+        elif len(cat_cols) == 2:
+
+            plt.figure(figsize=(10, 6))
+            sns.countplot(x=df[cat_cols[0]], hue=df[cat_cols[1]], data=df)
+            plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+            st.pyplot(plt)
+            # try:
+                # chart = plt.to_html()
+                # full_response += chart
+            # except:
+                # st.write("Error in converting chart to html")
+
+
+        elif len(date_cols) == 1 and len(num_cols) == 1:
+            fig = px.line(df, x=date_cols[0], y=num_cols[0], title=f'Trend Analysis:{num_cols[0]} vs {date_cols[0]}')
+            st.plotly_chart(fig)
+   
+#             plt.figure(figsize=(10, 6))
+#             sns.lineplot(x=df[date_cols[0]], y=df[num_cols[0]], data=df)
+#             plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+#             st.pyplot(plt)
+            # try:
+                # chart = plt.to_html()
+                # full_response += chart
+            # except:
+                # st.write("Error in converting chart to html")
+
+
+        else:
+            sns.pairplot(df)
+            st.pyplot(plt)
+            
+    elif len(df.columns)==3 and len(date_cols)==1 and len(num_cols)==2:
+        # Create traces
+        trace1 = go.Bar(
+            x=df[date_cols[0]],
+            y=df[num_cols[0]],
+            name=f'{num_cols[0]}',
+            yaxis='y1'
+        )
+        
+        trace2 = go.Scatter(
+            x=df[date_cols[0]],
+            y=df[num_cols[1]],
+            name=f'{num_cols[1]}',
+            yaxis='y2',
+            mode='lines'
+        )
+
+        # Define layout with dual y-axis
+        layout = go.Layout(
+            title=f'Variation of {num_cols[1]} and {num_cols[0]} with change of {date_cols[0]}',
+            xaxis=dict(title=f'{date_cols[0]}'),
+            yaxis=dict(
+                title=f'{num_cols[0]}',
+                titlefont=dict(color='blue'),
+                tickfont=dict(color='blue')
+            ),
+            yaxis2=dict(
+                title=f'{num_cols[1]}',
+                titlefont=dict(color='green'),
+                tickfont=dict(color='green'),
+                overlaying='y',
+                side='right'
+            )
+        )
+
+        # Create figure
+        fig = go.Figure(data=[trace1, trace2], layout=layout)
+        st.plotly_chart(fig)
+        
+#         line_plot = go.Scatter(x=df[date_cols[0]], y=df[num_cols[1]], mode='lines', name=f'{num_cols[1]}')
+#         bar_plot = go.Bar(x=df[date_cols[0]], y=df[num_cols[0]], name=f'{num_cols[0]}')
+#         fig = go.Figure(data=[line_plot, bar_plot])
+#         fig.update_layout(
+#             title=f'Variation of {num_cols[1]} and {num_cols[0]} with change of {date_cols[0]}',
+#             xaxis_title='Date',
+#             yaxis_title='Value',
+#             legend=dict(x=0.1, y=1.1, orientation='h')
+#         )
+#         st.plotly_chart(fig)
+            
+    elif len(df.columns)==3 and len(cat_cols)>=1:
+        
+        col_types = df.dtypes
+
+#         cat_col = None
+#         num_cols = []
+
+#         for col in df.columns:
+#             if col_types[col] == 'object' and df[col].nunique() == len(df):
+#                 categorical_col = col
+#             elif col_types[col] in ['int64', 'float64']:
+#                 num_cols.append(col)
+#         st.write(cat_cols,num_cols,len(cat_cols),len(num_cols))
+#         st.write(type(cat_cols))
+        # Check if we have one categorical and two numerical columns
+        if len(cat_cols)==1 and len(num_cols) == 2:
+#             df[cat_cols[0]]=df[cat_cols[0]].astype(str)
+#             df[cat_cols[0]]=df[cat_cols[0]].fillna('NA')
+            
+            
+            if df[cat_cols[0]].nunique() <= 5 and df[num_cols[0]].sum()>=99 and df[num_cols[0]].sum()<=101:
+                fig = px.pie(df, names=cat_cols[0], values=num_cols[0], color_discrete_map={'TOTAL':'Green'}, title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+                fig2 = px.pie(df, names=cat_cols[0], values=num_cols[1], title=f"Distribution of '{num_cols[1]}' across '{cat_cols[0]}'")
+                st.plotly_chart(fig)
+                st.plotly_chart(fig2)
+                # try:
+                    # chart = fig.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+                # try:
+                    # chart = fig2.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+                
+
+            else:
+                num_categories=df[cat_cols[0]].nunique()
+                width = 800
+                height = max(600,num_categories*50)
+                df['Color'] = df[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                bar=px.bar(df,x=num_cols[0],y=cat_cols[0],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'",text=num_cols[0],color='Color')
+                bar.update_traces(textposition='outside', textfont_size=12)
+                bar.update_layout(width=width, height=height)
+                bar.update_layout(showlegend=False)
+                st.plotly_chart(bar)
+                
+                df['Color'] = df[num_cols[1]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                bar2=px.bar(df,x=num_cols[1],y=cat_cols[0],title=f"Distribution of '{num_cols[1]}' across '{cat_cols[0]}'",text=num_cols[1],color='Color')
+                bar2.update_traces(textposition='outside', textfont_size=12)
+                bar2.update_layout(width=width, height=height)
+                bar2.update_layout(showlegend=False)
+                st.plotly_chart(bar2)
+                # try:
+                    # chart = bar.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+                # try:
+                    # chart = bar2.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+                
+        elif len(cat_cols)==2 and len(num_cols) == 1:
+            df[cat_cols[0]]=df[cat_cols[0]].astype(str)
+            df[cat_cols[1]]=df[cat_cols[1]].astype(str)
+            df[cat_cols[0]]=df[cat_cols[0]].fillna('NA')
+            df[cat_cols[1]]=df[cat_cols[1]].fillna('NA')
+            
+            list_cat=df[cat_cols[0]].unique()
+            st.write("\n\n")
+            for i in list_cat:
+                st.markdown(f"* {i} OVERVIEW *")
+                df_fltr=df[df[cat_cols[0]]==i]
+                df_fltr=df_fltr.drop(cat_cols[0],axis=1)
+                num_categories=df_fltr[cat_cols[1]].nunique()
+#                 num_categories2=df[cat_cols[1]].nunique()
+                height = 600 #max(80,num_categories2*20)
+                width=800
+                df_fltr['Color'] = df_fltr[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                bar=px.bar(df_fltr,x=num_cols[0],y=cat_cols[1],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[1]}'",text=num_cols[0],color='Color')
+                bar.update_traces(textposition='outside', textfont_size=12)
+                bar.update_layout(width=width, height=height)
+                bar.update_layout(showlegend=False)
+                st.plotly_chart(bar)
