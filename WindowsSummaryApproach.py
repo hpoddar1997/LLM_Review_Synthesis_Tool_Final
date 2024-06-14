@@ -438,7 +438,7 @@ def get_device_image_new(user_input):
     try:
         # Assuming the images are in a folder named 'Device Images'
         img_folder = 'Device Images'
-        img_path = os.path.join(img_folder, f"{dev}.jpg")
+        img_path = os.path.join(img_folder, f"{dev}.JPG")
         if not os.path.exists(img_path):
             img_path = None
     except:
