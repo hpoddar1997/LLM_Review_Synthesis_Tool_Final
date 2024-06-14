@@ -2352,7 +2352,7 @@ def custom_color_gradient_compare_devices(val, vmin=-100, vmax=100):
     # Convert interpolated RGB values to hex format for CSS color styling
     hex_color = f'#{r:02x}{g:02x}{b:02x}'
     return f'background-color: {hex_color}; color: black;'
-has context menu
+
     
     
 def devices_quant_approach1(user_question_final):
