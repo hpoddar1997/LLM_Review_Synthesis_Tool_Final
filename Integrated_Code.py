@@ -2659,7 +2659,9 @@ def sugg_checkbox(user_question):
         questions = prompt_suggestion(user_question)
         print(f"Prompt Suggestions: {questions}")
         st.session_state.prompt_sugg = questions.split('\n')
-    checkbox_states = [st.checkbox(question) for question in st.session_state.prompt_sugg]
+#     checkbox_states = [st.checkbox(question) for question in st.session_state.prompt_sugg]
+    checkbox_states = []
+    checkbox_states = [st.checkbox(st.session_state.prompt_sugg[i],key = f"Checkbox{i}") for i in range(len(st.session_state.prompt_sugg))]
     for i, state in enumerate(checkbox_states):
         if state:
             st.write(f"You selected: {st.session_state.prompt_sugg[i]}")
@@ -2753,6 +2755,10 @@ if __name__ == "__main__":
                     os.remove(file_path)
                 st.session_state['messages'] = []
                 st.session_state['chat_initiated'] = False
+                st.session_state.selected_sugg = None
+                st.session_state.prompt_sugg = None
+                st.session_state.selected_questions = ""
+                st.session_state.copilot_curr_ques = None
                 st.experimental_rerun()
 
         elif selected_options == "Devices":
