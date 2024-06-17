@@ -38,14 +38,15 @@ from fuzzywuzzy import process
 from rapidfuzz import process, fuzz
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
-AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
+os.environ["AZURE_OPENAI_API_KEY"] = "4c9521eb62f8419db3291a776acce1c5"
+os.environ["AZURE_OPENAI_ENDPOINT"] = "https://fordmustang.openai.azure.com/"
+
 
 
 client = AzureOpenAI(
-     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+     api_key=os.getenv("4c9521eb62f8419db3291a776acce1c5"),  
      api_version="2024-02-01",
-     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+     azure_endpoint = os.getenv("https://fordmustang.openai.azure.com/")
      )
 
 deployment_name='Surface_Analytics'
@@ -1288,7 +1289,7 @@ def generate_chart_insight_llm_devices(user_question):
         prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
         response = chain({"input_documents": [], "question": user_question}, return_only_outputs=True)
-        st.write("\n\n",response["output_text"])
+        #st.write("\n\n",response["output_text"])
         return response["output_text"]
             
     except Exception as e:
@@ -2432,6 +2433,7 @@ def devices_quant_approach1(user_question_final):
                     #st.write("final dataframe")
                     show_output2 = show_output2.style.applymap(custom_color_gradient_compare_devices,subset=['NET_SENTIMENT'])
                     show_output2 = show_output2.set_properties(**{'text-align': 'center'})
+                    
                     st.dataframe(show_output2)
                     #st.write(show_output2)
                     show_output2_html = show_output2.to_html(index=False)
@@ -2541,6 +2543,7 @@ def devices_quant_approach1(user_question_final):
                             #st.write("final dataframe
                             show_output2 = show_output2.style.applymap(custom_color_gradient_compare_devices,subset=['NET_SENTIMENT'])
                             show_output2 = show_output2.set_properties(**{'text-align': 'center'})
+                            
                             st.dataframe(show_output2)
                             #st.write(show_output2)
                             show_output2_html = show_output2.to_html(index=False)
@@ -2580,48 +2583,16 @@ def devices_quant_approach1(user_question_final):
             
             
 def sales_quant_approach1(user_question_final):
-    device = identify_devices(user_question_final)
-                                #st.write(device)
-    if device == "Device not available":
+    try:
+        
+    
+        device = identify_devices(user_question_final)
+                                    #st.write(device)
+        if device == "Device not available":
 
-##################################################################################################################################
-        #brand_list=list(RCR_Sales_Data['OEMGROUP'].unique())
-        #RCR_Sales_Data['Series'] = RCR_Sales_Data['Series']+RCR_Sales_Data['OEMGROUP']
-        response=query_quant_classify2_sales(user_question_final)
-        if isinstance(response, pd.DataFrame):
-            if 'Month' in response.columns:
-                response['Month']=pd.to_datetime(response['Month'])
-                response=response.sort_values('Month')
-            st.dataframe(response)
-            show_output2_html = response.to_html(index=False)
-            st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
-            insight_sales=generate_chart_insight_llm_devices(response)
-            st.write(insight_sales)
-            generate_chart(response)
-        else:
-            st.write(response)
-            st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})
-
-###################################################################################################################################
-
-    else:
-
-        device1 = get_sales_device_name(device)
-        #st.write(device1)
-        if device1:
-            user_question_final=user_question_final.replace(device,device1)
-
+    ##################################################################################################################################
             #brand_list=list(RCR_Sales_Data['OEMGROUP'].unique())
-#                                 for i in range(len(RCR_Sales_Data)):
-#                                     RCR_Sales_Data['Series'][i]=RCR_Sales_Data['OEMGROUP'][i]+" "+RCR_Sales_Data['Series'][i]
-
             #RCR_Sales_Data['Series'] = RCR_Sales_Data['Series']+RCR_Sales_Data['OEMGROUP']
-            #st.write(RCR_Sales_Data['Series'].unique)
-#                                 for i in brand_list:
-#                                     if i.upper() in user_question_final:
-#                                         user_question_final=user_question_final.replace(i.upper(),'')
-
-            #st.write(user_question_final)
             response=query_quant_classify2_sales(user_question_final)
             if isinstance(response, pd.DataFrame):
                 if 'Month' in response.columns:
@@ -2635,279 +2606,315 @@ def sales_quant_approach1(user_question_final):
                 generate_chart(response)
             else:
                 st.write(response)
-                st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})           
-            
-            
+                st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})
 
-            
-            
-            
-def generate_chart(df):
-    global full_response
-    # Determine the data types of the columns
-#     if df.shape[0] == 1:
-#         #print("hi")
-#         return
-    df_copy=df.copy()
-    df = df[~df.applymap(lambda x: x == 'TOTAL').any(axis=1)]
-    #st.write("shape of df",df)
-    if df.shape[0] == 1 or (df.shape[0]==2 and (df.iloc[0:1,-1]==df.iloc[1:2,-1])):
-        return
-    
-    
-    if 'REVIEW_COUNT' in df.columns:
-        df.drop('REVIEW_COUNT',axis=1, inplace=True)
-        #st.write(df)
-        
-    try:
-        df=df.drop('Impact',axis=1)
-        df=df.drop('REVIEW_COUNT',axis=1)
-        
-    except:
-        pass
-    num_cols = df.select_dtypes(include=['number']).columns
-    cat_cols = df.select_dtypes(include=['object', 'category']).columns
-    date_cols = df.select_dtypes(include=['datetime']).columns
-    
-    if len(num_cols)>0:
-        for i in range(len(num_cols)):
-            df[num_cols[i]]=round(df[num_cols[i]],1)
-            
-    if len(df.columns)>3:
-        try:
-            cols_to_drop = [col for col in df.columns if df[col].nunique() == 1]
-            df.drop(columns=cols_to_drop, inplace=True)
-        except:
-            pass
-        
-        df=df.iloc[:, :3]
-        
-    num_cols = df.select_dtypes(include=['number']).columns
-    cat_cols = df.select_dtypes(include=['object', 'category']).columns
-    date_cols = df.select_dtypes(include=['datetime']).columns
-    #st.write(num_cols,cat_cols,len(num_cols),len(cat_cols))
-    # Simple heuristic to determine the most suitable chart
-    if len(df.columns)<=2:
-        
-        if len(num_cols) == 1 and len(cat_cols) == 0 and len(date_cols) == 0:
-
-            plt.figure(figsize=(10, 6))
-            sns.histplot(df[num_cols[0]], kde=True)
-            plt.title(f"Frequency Distribution of '{num_cols[0]}'")
-            st.pyplot(plt)
-            # try:
-                # chart = plt.to_html()
-                # full_response += chart
-            # except:
-                # st.write("Error in converting chart to html")
-
-
-        elif len(num_cols) == 2:
-   
-            plt.figure(figsize=(10, 6))
-            sns.scatterplot(x=df[num_cols[0]], y=df[num_cols[1]])
-            plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
-            st.pyplot(plt)
-            # try:
-                # chart = plt.to_html()
-                # full_response += chart
-            # except:
-                # st.write("Error in converting chart to html")
-
-
-        elif len(cat_cols) == 1 and len(num_cols) == 1:
-            if df[cat_cols[0]].nunique() <= 5 and df[num_cols[0]].sum()>=99 and df[num_cols[0]].sum()<=101:
-                fig = px.pie(df, names=cat_cols[0], values=num_cols[0], title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
-                st.plotly_chart(fig)
-                # try:
-                    # chart = fig.to_html()
-                    # full_response += chart
-                # except:
-                    # st.write("Error in converting chart to html")
-
-            else:
-                num_categories=df[cat_cols[0]].nunique()
-                width = 800
-                height = max(600,num_categories*50)
-                df['Color'] = df[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
-                bar=px.bar(df,x=num_cols[0],y=cat_cols[0],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'",text=num_cols[0],color='Color')
-                bar.update_traces(textposition='outside', textfont_size=12)
-                bar.update_layout(width=width, height=height)
-                bar.update_layout(showlegend=False)
-                st.plotly_chart(bar)
-                # try:
-                    # chart = bar.to_html()
-                    # full_response += chart
-                # except:
-                    # st.write("Error in converting chart to html")
-
-
-        elif len(cat_cols) == 2:
-
-            plt.figure(figsize=(10, 6))
-            sns.countplot(x=df[cat_cols[0]], hue=df[cat_cols[1]], data=df)
-            plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
-            st.pyplot(plt)
-            # try:
-                # chart = plt.to_html()
-                # full_response += chart
-            # except:
-                # st.write("Error in converting chart to html")
-
-
-        elif len(date_cols) == 1 and len(num_cols) == 1:
-            fig = px.line(df, x=date_cols[0], y=num_cols[0], title=f'Trend Analysis:{num_cols[0]} vs {date_cols[0]}')
-            st.plotly_chart(fig)
-   
-#             plt.figure(figsize=(10, 6))
-#             sns.lineplot(x=df[date_cols[0]], y=df[num_cols[0]], data=df)
-#             plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
-#             st.pyplot(plt)
-            # try:
-                # chart = plt.to_html()
-                # full_response += chart
-            # except:
-                # st.write("Error in converting chart to html")
-
+    ###################################################################################################################################
 
         else:
-            sns.pairplot(df)
-            st.pyplot(plt)
+
+            device1 = get_sales_device_name(device)
+            #st.write(device1)
+            if device1:
+                user_question_final=user_question_final.replace(device,device1)
+
+                #brand_list=list(RCR_Sales_Data['OEMGROUP'].unique())
+    #                                 for i in range(len(RCR_Sales_Data)):
+    #                                     RCR_Sales_Data['Series'][i]=RCR_Sales_Data['OEMGROUP'][i]+" "+RCR_Sales_Data['Series'][i]
+
+                #RCR_Sales_Data['Series'] = RCR_Sales_Data['Series']+RCR_Sales_Data['OEMGROUP']
+                #st.write(RCR_Sales_Data['Series'].unique)
+    #                                 for i in brand_list:
+    #                                     if i.upper() in user_question_final:
+    #                                         user_question_final=user_question_final.replace(i.upper(),'')
+
+                #st.write(user_question_final)
+                response=query_quant_classify2_sales(user_question_final)
+                if isinstance(response, pd.DataFrame):
+                    if 'Month' in response.columns:
+                        response['Month']=pd.to_datetime(response['Month'])
+                        response=response.sort_values('Month')
+                    st.dataframe(response)
+                    show_output2_html = response.to_html(index=False)
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": show_output2_html, "is_html": True})
+                    insight_sales=generate_chart_insight_llm_devices(response)
+                    st.write(insight_sales)
+                    generate_chart(response)
+                else:
+                    st.write(response)
+                    st.session_state.display_history_devices.append({"role": "assistant", "content": response, "is_html": False})           
+    except:
+        st.write(f"Cannot generate quantitative output for the given prompt. Please rephrase and try again!")
             
-    elif len(df.columns)==3 and len(date_cols)==1 and len(num_cols)==2:
-        # Create traces
-        trace1 = go.Bar(
-            x=df[date_cols[0]],
-            y=df[num_cols[0]],
-            name=f'{num_cols[0]}',
-            yaxis='y1'
-        )
+def generate_chart(df):
+    try:
         
-        trace2 = go.Scatter(
-            x=df[date_cols[0]],
-            y=df[num_cols[1]],
-            name=f'{num_cols[1]}',
-            yaxis='y2',
-            mode='lines'
-        )
+        global full_response
+        # Determine the data types of the columns
+    #     if df.shape[0] == 1:
+    #         #print("hi")
+    #         return
+        df_copy=df.copy()
+        df = df[~df.applymap(lambda x: x == 'TOTAL').any(axis=1)]
+        #st.write("shape of df",df)
+        if df.shape[0] == 1 or (df.shape[0]==2 and (df.iloc[0:1,-1]==df.iloc[1:2,-1])):
+            return
 
-        # Define layout with dual y-axis
-        layout = go.Layout(
-            title=f'Variation of {num_cols[1]} and {num_cols[0]} with change of {date_cols[0]}',
-            xaxis=dict(title=f'{date_cols[0]}'),
-            yaxis=dict(
-                title=f'{num_cols[0]}',
-                titlefont=dict(color='blue'),
-                tickfont=dict(color='blue')
-            ),
-            yaxis2=dict(
-                title=f'{num_cols[1]}',
-                titlefont=dict(color='green'),
-                tickfont=dict(color='green'),
-                overlaying='y',
-                side='right'
-            )
-        )
 
-        # Create figure
-        fig = go.Figure(data=[trace1, trace2], layout=layout)
-        st.plotly_chart(fig)
-        
-#         line_plot = go.Scatter(x=df[date_cols[0]], y=df[num_cols[1]], mode='lines', name=f'{num_cols[1]}')
-#         bar_plot = go.Bar(x=df[date_cols[0]], y=df[num_cols[0]], name=f'{num_cols[0]}')
-#         fig = go.Figure(data=[line_plot, bar_plot])
-#         fig.update_layout(
-#             title=f'Variation of {num_cols[1]} and {num_cols[0]} with change of {date_cols[0]}',
-#             xaxis_title='Date',
-#             yaxis_title='Value',
-#             legend=dict(x=0.1, y=1.1, orientation='h')
-#         )
-#         st.plotly_chart(fig)
-            
-    elif len(df.columns)==3 and len(cat_cols)>=1:
-        
-        col_types = df.dtypes
+        if 'REVIEW_COUNT' in df.columns:
+            df.drop('REVIEW_COUNT',axis=1, inplace=True)
+            #st.write(df)
 
-#         cat_col = None
-#         num_cols = []
+        try:
+            df=df.drop('Impact',axis=1)
+            df=df.drop('REVIEW_COUNT',axis=1)
 
-#         for col in df.columns:
-#             if col_types[col] == 'object' and df[col].nunique() == len(df):
-#                 categorical_col = col
-#             elif col_types[col] in ['int64', 'float64']:
-#                 num_cols.append(col)
-#         st.write(cat_cols,num_cols,len(cat_cols),len(num_cols))
-#         st.write(type(cat_cols))
-        # Check if we have one categorical and two numerical columns
-        if len(cat_cols)==1 and len(num_cols) == 2:
-#             df[cat_cols[0]]=df[cat_cols[0]].astype(str)
-#             df[cat_cols[0]]=df[cat_cols[0]].fillna('NA')
-            
-            
-            if df[cat_cols[0]].nunique() <= 5 and df[num_cols[0]].sum()>=99 and df[num_cols[0]].sum()<=101:
-                fig = px.pie(df, names=cat_cols[0], values=num_cols[0], color_discrete_map={'TOTAL':'Green'}, title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
-                fig2 = px.pie(df, names=cat_cols[0], values=num_cols[1], title=f"Distribution of '{num_cols[1]}' across '{cat_cols[0]}'")
+        except:
+            pass
+        num_cols = df.select_dtypes(include=['number']).columns
+        cat_cols = df.select_dtypes(include=['object', 'category']).columns
+        date_cols = df.select_dtypes(include=['datetime']).columns
+
+        if len(num_cols)>0:
+            for i in range(len(num_cols)):
+                df[num_cols[i]]=round(df[num_cols[i]],1)
+
+        if len(df.columns)>3:
+            try:
+                cols_to_drop = [col for col in df.columns if df[col].nunique() == 1]
+                df.drop(columns=cols_to_drop, inplace=True)
+            except:
+                pass
+
+            df=df.iloc[:, :3]
+
+        num_cols = df.select_dtypes(include=['number']).columns
+        cat_cols = df.select_dtypes(include=['object', 'category']).columns
+        date_cols = df.select_dtypes(include=['datetime']).columns
+        #st.write(num_cols,cat_cols,len(num_cols),len(cat_cols))
+        # Simple heuristic to determine the most suitable chart
+        if len(df.columns)<=2:
+
+            if len(num_cols) == 1 and len(cat_cols) == 0 and len(date_cols) == 0:
+
+                plt.figure(figsize=(10, 6))
+                sns.histplot(df[num_cols[0]], kde=True)
+                plt.title(f"Frequency Distribution of '{num_cols[0]}'")
+                st.pyplot(plt)
+                # try:
+                    # chart = plt.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+
+
+            elif len(num_cols) == 2:
+
+                plt.figure(figsize=(10, 6))
+                sns.scatterplot(x=df[num_cols[0]], y=df[num_cols[1]])
+                plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+                st.pyplot(plt)
+                # try:
+                    # chart = plt.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+
+
+            elif len(cat_cols) == 1 and len(num_cols) == 1:
+                if df[cat_cols[0]].nunique() <= 5 and df[num_cols[0]].sum()>=99 and df[num_cols[0]].sum()<=101:
+                    fig = px.pie(df, names=cat_cols[0], values=num_cols[0], title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+                    st.plotly_chart(fig)
+                    # try:
+                        # chart = fig.to_html()
+                        # full_response += chart
+                    # except:
+                        # st.write("Error in converting chart to html")
+
+                else:
+                    num_categories=df[cat_cols[0]].nunique()
+                    width = 800
+                    height = max(600,num_categories*50)
+                    df['Color'] = df[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                    bar=px.bar(df,x=num_cols[0],y=cat_cols[0],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'",text=num_cols[0],color='Color')
+                    bar.update_traces(textposition='outside', textfont_size=12)
+                    bar.update_layout(width=width, height=height)
+                    bar.update_layout(showlegend=False)
+                    st.plotly_chart(bar)
+                    # try:
+                        # chart = bar.to_html()
+                        # full_response += chart
+                    # except:
+                        # st.write("Error in converting chart to html")
+
+
+            elif len(cat_cols) == 2:
+
+                plt.figure(figsize=(10, 6))
+                sns.countplot(x=df[cat_cols[0]], hue=df[cat_cols[1]], data=df)
+                plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+                st.pyplot(plt)
+                # try:
+                    # chart = plt.to_html()
+                    # full_response += chart
+                # except:
+                    # st.write("Error in converting chart to html")
+
+
+            elif len(date_cols) == 1 and len(num_cols) == 1:
+                fig = px.line(df, x=date_cols[0], y=num_cols[0], title=f'Trend Analysis:{num_cols[0]} vs {date_cols[0]}')
                 st.plotly_chart(fig)
-                st.plotly_chart(fig2)
+
+    #             plt.figure(figsize=(10, 6))
+    #             sns.lineplot(x=df[date_cols[0]], y=df[num_cols[0]], data=df)
+    #             plt.title(f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+    #             st.pyplot(plt)
                 # try:
-                    # chart = fig.to_html()
+                    # chart = plt.to_html()
                     # full_response += chart
                 # except:
                     # st.write("Error in converting chart to html")
-                # try:
-                    # chart = fig2.to_html()
-                    # full_response += chart
-                # except:
-                    # st.write("Error in converting chart to html")
-                
+
 
             else:
-                num_categories=df[cat_cols[0]].nunique()
-                width = 800
-                height = max(600,num_categories*50)
-                df['Color'] = df[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
-                bar=px.bar(df,x=num_cols[0],y=cat_cols[0],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'",text=num_cols[0],color='Color')
-                bar.update_traces(textposition='outside', textfont_size=12)
-                bar.update_layout(width=width, height=height)
-                bar.update_layout(showlegend=False)
-                st.plotly_chart(bar)
-                
-                df['Color'] = df[num_cols[1]].apply(lambda x: 'grey' if x < 0 else 'blue')
-                bar2=px.bar(df,x=num_cols[1],y=cat_cols[0],title=f"Distribution of '{num_cols[1]}' across '{cat_cols[0]}'",text=num_cols[1],color='Color')
-                bar2.update_traces(textposition='outside', textfont_size=12)
-                bar2.update_layout(width=width, height=height)
-                bar2.update_layout(showlegend=False)
-                st.plotly_chart(bar2)
-                # try:
-                    # chart = bar.to_html()
-                    # full_response += chart
-                # except:
-                    # st.write("Error in converting chart to html")
-                # try:
-                    # chart = bar2.to_html()
-                    # full_response += chart
-                # except:
-                    # st.write("Error in converting chart to html")
-                
-        elif len(cat_cols)==2 and len(num_cols) == 1:
-            df[cat_cols[0]]=df[cat_cols[0]].astype(str)
-            df[cat_cols[1]]=df[cat_cols[1]].astype(str)
-            df[cat_cols[0]]=df[cat_cols[0]].fillna('NA')
-            df[cat_cols[1]]=df[cat_cols[1]].fillna('NA')
-            
-            list_cat=df[cat_cols[0]].unique()
-            st.write("\n\n")
-            for i in list_cat:
-                st.markdown(f"* {i} OVERVIEW *")
-                df_fltr=df[df[cat_cols[0]]==i]
-                df_fltr=df_fltr.drop(cat_cols[0],axis=1)
-                num_categories=df_fltr[cat_cols[1]].nunique()
-#                 num_categories2=df[cat_cols[1]].nunique()
-                height = 600 #max(80,num_categories2*20)
-                width=800
-                df_fltr['Color'] = df_fltr[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
-                bar=px.bar(df_fltr,x=num_cols[0],y=cat_cols[1],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[1]}'",text=num_cols[0],color='Color')
-                bar.update_traces(textposition='outside', textfont_size=12)
-                bar.update_layout(width=width, height=height)
-                bar.update_layout(showlegend=False)
-                st.plotly_chart(bar)
+                sns.pairplot(df)
+                st.pyplot(plt)
+
+        elif len(df.columns)==3 and len(date_cols)==1 and len(num_cols)==2:
+            # Create traces
+            trace1 = go.Bar(
+                x=df[date_cols[0]],
+                y=df[num_cols[0]],
+                name=f'{num_cols[0]}',
+                yaxis='y1'
+            )
+
+            trace2 = go.Scatter(
+                x=df[date_cols[0]],
+                y=df[num_cols[1]],
+                name=f'{num_cols[1]}',
+                yaxis='y2',
+                mode='lines'
+            )
+
+            # Define layout with dual y-axis
+            layout = go.Layout(
+                title=f'Variation of {num_cols[1]} and {num_cols[0]} with change of {date_cols[0]}',
+                xaxis=dict(title=f'{date_cols[0]}'),
+                yaxis=dict(
+                    title=f'{num_cols[0]}',
+                    titlefont=dict(color='blue'),
+                    tickfont=dict(color='blue')
+                ),
+                yaxis2=dict(
+                    title=f'{num_cols[1]}',
+                    titlefont=dict(color='green'),
+                    tickfont=dict(color='green'),
+                    overlaying='y',
+                    side='right'
+                )
+            )
+
+            # Create figure
+            fig = go.Figure(data=[trace1, trace2], layout=layout)
+            st.plotly_chart(fig)
+
+    #         line_plot = go.Scatter(x=df[date_cols[0]], y=df[num_cols[1]], mode='lines', name=f'{num_cols[1]}')
+    #         bar_plot = go.Bar(x=df[date_cols[0]], y=df[num_cols[0]], name=f'{num_cols[0]}')
+    #         fig = go.Figure(data=[line_plot, bar_plot])
+    #         fig.update_layout(
+    #             title=f'Variation of {num_cols[1]} and {num_cols[0]} with change of {date_cols[0]}',
+    #             xaxis_title='Date',
+    #             yaxis_title='Value',
+    #             legend=dict(x=0.1, y=1.1, orientation='h')
+    #         )
+    #         st.plotly_chart(fig)
+
+        elif len(df.columns)==3 and len(cat_cols)>=1:
+
+            col_types = df.dtypes
+
+    #         cat_col = None
+    #         num_cols = []
+
+    #         for col in df.columns:
+    #             if col_types[col] == 'object' and df[col].nunique() == len(df):
+    #                 categorical_col = col
+    #             elif col_types[col] in ['int64', 'float64']:
+    #                 num_cols.append(col)
+    #         st.write(cat_cols,num_cols,len(cat_cols),len(num_cols))
+    #         st.write(type(cat_cols))
+            # Check if we have one categorical and two numerical columns
+            if len(cat_cols)==1 and len(num_cols) == 2:
+    #             df[cat_cols[0]]=df[cat_cols[0]].astype(str)
+    #             df[cat_cols[0]]=df[cat_cols[0]].fillna('NA')
+
+
+                if df[cat_cols[0]].nunique() <= 5 and df[num_cols[0]].sum()>=99 and df[num_cols[0]].sum()<=101:
+                    fig = px.pie(df, names=cat_cols[0], values=num_cols[0], color_discrete_map={'TOTAL':'Green'}, title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'")
+                    fig2 = px.pie(df, names=cat_cols[0], values=num_cols[1], title=f"Distribution of '{num_cols[1]}' across '{cat_cols[0]}'")
+                    st.plotly_chart(fig)
+                    st.plotly_chart(fig2)
+                    # try:
+                        # chart = fig.to_html()
+                        # full_response += chart
+                    # except:
+                        # st.write("Error in converting chart to html")
+                    # try:
+                        # chart = fig2.to_html()
+                        # full_response += chart
+                    # except:
+                        # st.write("Error in converting chart to html")
+
+
+                else:
+                    num_categories=df[cat_cols[0]].nunique()
+                    width = 800
+                    height = max(600,num_categories*50)
+                    df['Color'] = df[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                    bar=px.bar(df,x=num_cols[0],y=cat_cols[0],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[0]}'",text=num_cols[0],color='Color')
+                    bar.update_traces(textposition='outside', textfont_size=12)
+                    bar.update_layout(width=width, height=height)
+                    bar.update_layout(showlegend=False)
+                    st.plotly_chart(bar)
+
+                    df['Color'] = df[num_cols[1]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                    bar2=px.bar(df,x=num_cols[1],y=cat_cols[0],title=f"Distribution of '{num_cols[1]}' across '{cat_cols[0]}'",text=num_cols[1],color='Color')
+                    bar2.update_traces(textposition='outside', textfont_size=12)
+                    bar2.update_layout(width=width, height=height)
+                    bar2.update_layout(showlegend=False)
+                    st.plotly_chart(bar2)
+                    # try:
+                        # chart = bar.to_html()
+                        # full_response += chart
+                    # except:
+                        # st.write("Error in converting chart to html")
+                    # try:
+                        # chart = bar2.to_html()
+                        # full_response += chart
+                    # except:
+                        # st.write("Error in converting chart to html")
+
+            elif len(cat_cols)==2 and len(num_cols) == 1:
+                df[cat_cols[0]]=df[cat_cols[0]].astype(str)
+                df[cat_cols[1]]=df[cat_cols[1]].astype(str)
+                df[cat_cols[0]]=df[cat_cols[0]].fillna('NA')
+                df[cat_cols[1]]=df[cat_cols[1]].fillna('NA')
+
+                list_cat=df[cat_cols[0]].unique()
+                st.write("\n\n")
+                for i in list_cat:
+                    st.markdown(f"* {i} OVERVIEW *")
+                    df_fltr=df[df[cat_cols[0]]==i]
+                    df_fltr=df_fltr.drop(cat_cols[0],axis=1)
+                    num_categories=df_fltr[cat_cols[1]].nunique()
+    #                 num_categories2=df[cat_cols[1]].nunique()
+                    height = 600 #max(80,num_categories2*20)
+                    width=800
+                    df_fltr['Color'] = df_fltr[num_cols[0]].apply(lambda x: 'grey' if x < 0 else 'blue')
+                    bar=px.bar(df_fltr,x=num_cols[0],y=cat_cols[1],title=f"Distribution of '{num_cols[0]}' across '{cat_cols[1]}'",text=num_cols[0],color='Color')
+                    bar.update_traces(textposition='outside', textfont_size=12)
+                    bar.update_layout(width=width, height=height)
+                    bar.update_layout(showlegend=False)
+                    st.plotly_chart(bar)
+    except:
+        pass

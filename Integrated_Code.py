@@ -70,9 +70,25 @@ else:
     print("Not the first run, list loaded from file.")
     
     
+# os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+# AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
+# AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
+
+############## DON'T FORGET TO DELETE THIS ###############
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
-AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
+#Initializing API Keys to use LLM
+os.environ["AZURE_OPENAI_API_KEY"] = "4c9521eb62f8419db3291a776acce1c5"
+os.environ["AZURE_OPENAI_ENDPOINT"] = "https://fordmustang.openai.azure.com/"
+
+
+client = AzureOpenAI(
+    api_key=os.getenv("4c9521eb62f8419db3291a776acce1c5"),  
+    api_version="2024-02-01",
+    azure_endpoint = os.getenv("https://fordmustang.openai.azure.com/")
+    )
+
+############## DELETE UNTIL HERE ###############
+
 
 global model
 model = AzureChatOpenAI(
@@ -92,6 +108,14 @@ if not hasattr(st.session_state, 'devices_flag'):
     st.session_state.devices_flag = False
 if not hasattr(st.session_state, 'devices_approach'):
     st.session_state.devices_approach = ""
+if not hasattr(st.session_state, 'selected_sugg'):
+    st.session_state.selected_sugg = None
+if not hasattr(st.session_state, 'prompt_sugg'):
+    st.session_state.prompt_sugg = None
+if not hasattr(st.session_state, 'selected_questions'):
+    st.session_state.selected_questions = ""
+if not hasattr(st.session_state, 'copilot_curr_ques'):
+    st.session_state.copilot_curr_ques = None
 ####################################################################################################################----------------Copilot-------------------#####################################################################################################
 
 Copilot_Sentiment_Data  = pd.read_csv("Cleaned_Combined_Data.csv")
@@ -609,67 +633,255 @@ def get_conversational_chain_quant_classify2_compare():
                             1. Compare aspect wise sentiment of different Product Families / Compare different AI models / Compare aspect wise sentiment of different AI models:
                             
                                 Follow this same template whenever user asks for compare different AI models across Geography, make sure to change all the aspects to Geography
+                                \
+                                
+                                IMPORTANT : Everytime give the overall sentiment. Every PRODUCT Copilot overall and aspect should be in your response.
+                                
+                                IMPORTANT : ADD COPILOT_OVERALL_NETSENTIMENT EVERYTIME FOR COMPARISON
 
-                                  WITH NetSentiment AS (
-                                                           SELECT 
-                                                                PRODUCT_FAMILY, 
-                                                                ASPECT, 
-                                                                ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT, 
-                                                                SUM(REVIEW_COUNT) AS Review_Count
-                                                            FROM 
-                                                                Copilot_Sentiment_Data
-                                                            GROUP BY 
-                                                                PRODUCT_FAMILY, ASPECT 
-                                                        ),
-                                                        OrderedNetSentiment AS (
-                                                            SELECT 
-                                                                PRODUCT_FAMILY, 
-                                                                ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT
-                                                            FROM 
-                                                                Copilot_Sentiment_Data
-                                                            GROUP BY 
-                                                                PRODUCT_FAMILY
-                                                            ORDER BY 
-                                                                NET_SENTIMENT DESC
-                                                        )
+                                 WITH NETSENTIMENT AS (
+                                                        SELECT
+                                                            PRODUCT_FAMILY,
+                                                            ASPECT,
+                                                            ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT,
+                                                            SUM(REVIEW_COUNT) AS REVIEW_COUNT
+                                                        FROM
+                                                            Copilot_Sentiment_Data
+                                                        GROUP BY
+                                                            PRODUCT_FAMILY, ASPECT
+                                                    ),
 
-                                                        -- Combine the aspect net sentiments with the overall net sentiment
-                                                        SELECT 
-                                                            ns.PRODUCT_FAMILY, 
-                                                            ns.ASPECT,
-                                                            ns.NET_SENTIMENT AS NET_SENTIMENT_ASPECT, comment : (for geography name this as NET_SENTIMENT_GEOGRAPHY)
-                                                            ons.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
-                                                            ns.Review_Count
-                                                        FROM 
-                                                            NetSentiment ns
-                                                        JOIN 
-                                                            OrderedNetSentiment ons 
-                                                        ON 
-                                                            ns.PRODUCT_FAMILY = ons.PRODUCT_FAMILY
+                                                    COPILOT_NETSENTIMENT AS (
+                                                        SELECT
+                                                            'Copilot' AS PRODUCT_FAMILY,
+                                                            ASPECT,
+                                                            ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT,
+                                                            SUM(REVIEW_COUNT) AS REVIEW_COUNT
+                                                        FROM
+                                                            Copilot_Sentiment_Data
+                                                        WHERE
+                                                            PRODUCT = 'Copilot'
+                                                        GROUP BY
+                                                            ASPECT
+                                                    ),
 
-                                                        UNION ALL
+                                                    COPILOT_OVERALL_NETSENTIMENT AS (
+                                                        SELECT
+                                                            'Copilot' AS PRODUCT_FAMILY,
+                                                            ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT
+                                                        FROM
+                                                            Copilot_Sentiment_Data
+                                                        WHERE
+                                                            PRODUCT = 'Copilot'
+                                                    )
 
-                                                        -- Add the overall net sentiment as a row with 'Overall' as the ASPECT
-                                                        SELECT 
-                                                            ons.PRODUCT_FAMILY,
-                                                            'Overall' AS ASPECT,
-                                                            ons.NET_SENTIMENT AS NET_SENTIMENT_ASPECT, comment : (for geography name this as NET_SENTIMENT_GEOGRAPHY)
-                                                            ons.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
-                                                            SUM(ns.Review_Count) AS Review_Count
-                                                        FROM 
-                                                            OrderedNetSentiment ons
-                                                        JOIN 
-                                                            NetSentiment ns
-                                                        ON 
-                                                            ons.PRODUCT_FAMILY = ns.PRODUCT_FAMILY
-                                                        GROUP BY 
-                                                            ons.PRODUCT_FAMILY, ons.NET_SENTIMENT
+                                                    SELECT
+                                                        NS.PRODUCT_FAMILY,
+                                                        NS.ASPECT,
+                                                        NS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                        ONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                        NS.REVIEW_COUNT
+                                                    FROM
+                                                        NETSENTIMENT NS
+                                                    JOIN
+                                                        (SELECT
+                                                            PRODUCT_FAMILY,
+                                                            ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT
+                                                        FROM
+                                                            Copilot_Sentiment_Data
+                                                        GROUP BY
+                                                            PRODUCT_FAMILY) ONS
+                                                    ON
+                                                        NS.PRODUCT_FAMILY  LIKE  ONS.PRODUCT_FAMILY
 
-                                                        ORDER BY 
-                                                            Review_Count DESC;
-                                                            
-                                                    
-                            2. End User UserCase - Comparison of Keywords :
+                                                    UNION ALL
+
+                                                    SELECT
+                                                        ONS.PRODUCT_FAMILY,
+                                                        'OVERALL' AS ASPECT,
+                                                        ONS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                        ONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                        SUM(NS.REVIEW_COUNT) AS REVIEW_COUNT
+                                                    FROM
+                                                        (SELECT
+                                                            PRODUCT_FAMILY,
+                                                            ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT
+                                                        FROM
+                                                            Copilot_Sentiment_Data
+                                                        GROUP BY
+                                                            PRODUCT_FAMILY) ONS
+                                                    JOIN
+                                                        NETSENTIMENT NS
+                                                    ON
+                                                        ONS.PRODUCT_FAMILY  LIKE  NS.PRODUCT_FAMILY
+                                                    GROUP BY
+                                                        ONS.PRODUCT_FAMILY, ONS.NET_SENTIMENT
+
+                                                    UNION ALL
+
+                                                    SELECT
+                                                        CNS.PRODUCT_FAMILY,
+                                                        CNS.ASPECT,
+                                                        CNS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                        CONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                        CNS.REVIEW_COUNT
+                                                    FROM
+                                                        COPILOT_NETSENTIMENT CNS
+                                                    JOIN
+                                                        COPILOT_OVERALL_NETSENTIMENT CONS
+                                                    ON
+                                                        CNS.PRODUCT_FAMILY = CONS.PRODUCT_FAMILY
+
+                                                    UNION ALL
+
+                                                    SELECT
+                                                        'Copilot' AS PRODUCT_FAMILY,
+                                                        'OVERALL' AS ASPECT,
+                                                        CONS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                        CONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                        SUM(CNS.REVIEW_COUNT) AS REVIEW_COUNT
+                                                    FROM
+                                                        COPILOT_NETSENTIMENT CNS
+                                                    JOIN
+                                                        COPILOT_OVERALL_NETSENTIMENT CONS
+                                                    ON
+                                                        CNS.PRODUCT_FAMILY = CONS.PRODUCT_FAMILY
+                                                    GROUP BY
+                                                        CONS.PRODUCT_FAMILY, CONS.NET_SENTIMENT
+
+                                                    ORDER BY
+                                                        REVIEW_COUNT DESC;
+                                                        
+                                        
+                            2. Specific Product_Family comparision with competitors : Compare Github copilot with its competitors:/ Compare [Product Family] with its competitors. It can any AI model. Change the names in the below SQL accordingly.
+                            
+                            IMPORTANT : ADD COPILOT_OVERALL_NETSENTIMENT EVERYTIME FOR COMPARISON
+                            
+                            
+                            WITH NETSENTIMENT AS (
+                                                    SELECT
+                                                        PRODUCT_FAMILY,
+                                                        ASPECT,
+                                                        ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT,
+                                                        SUM(REVIEW_COUNT) AS REVIEW_COUNT
+                                                    FROM
+                                                        Copilot_Sentiment_Data
+                                                    WHERE
+                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT','OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI')
+                                                    GROUP BY
+                                                        PRODUCT_FAMILY, ASPECT
+                                                ),
+
+                                                COPILOT_NETSENTIMENT AS (
+                                                    SELECT
+                                                        'Copilot' AS PRODUCT_FAMILY,
+                                                        ASPECT,
+                                                        ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT,
+                                                        SUM(REVIEW_COUNT) AS REVIEW_COUNT
+                                                    FROM
+                                                        Copilot_Sentiment_Data
+                                                    WHERE
+                                                        PRODUCT = 'Copilot'
+                                                    GROUP BY
+                                                        ASPECT
+                                                ),
+
+                                                COPILOT_OVERALL_NETSENTIMENT AS (
+                                                    SELECT
+                                                        'Copilot' AS PRODUCT_FAMILY,
+                                                        ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT
+                                                    FROM
+                                                        Copilot_Sentiment_Data
+                                                    WHERE
+                                                        PRODUCT = 'Copilot'
+                                                )
+
+                                                SELECT
+                                                    NS.PRODUCT_FAMILY,
+                                                    NS.ASPECT,
+                                                    NS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                    ONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                    NS.REVIEW_COUNT
+                                                FROM
+                                                    NETSENTIMENT NS
+                                                JOIN
+                                                    (SELECT
+                                                        PRODUCT_FAMILY,
+                                                        ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT
+                                                    FROM
+                                                        Copilot_Sentiment_Data
+                                                    WHERE
+                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT', 'OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI')
+                                                    GROUP BY
+                                                        PRODUCT_FAMILY) ONS
+                                                ON
+                                                    NS.PRODUCT_FAMILY = ONS.PRODUCT_FAMILY
+
+                                                UNION ALL
+
+                                                SELECT
+                                                    ONS.PRODUCT_FAMILY,
+                                                    'OVERALL' AS ASPECT,
+                                                    ONS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                    ONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                    SUM(NS.REVIEW_COUNT) AS REVIEW_COUNT
+                                                FROM
+                                                    (SELECT
+                                                        PRODUCT_FAMILY,
+                                                        ((SUM(SENTIMENT_SCORE) * 1.0) / (SUM(REVIEW_COUNT) * 1.0)) * 100 AS NET_SENTIMENT
+                                                    FROM
+                                                        Copilot_Sentiment_Data
+                                                    WHERE
+                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT', 'OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI')
+                                                    GROUP BY
+                                                        PRODUCT_FAMILY) ONS
+                                                JOIN
+                                                    NETSENTIMENT NS
+                                                ON
+                                                    ONS.PRODUCT_FAMILY = NS.PRODUCT_FAMILY
+                                                GROUP BY
+                                                    ONS.PRODUCT_FAMILY, ONS.NET_SENTIMENT
+
+                                                UNION ALL
+
+                                                SELECT
+                                                    CNS.PRODUCT_FAMILY,
+                                                    CNS.ASPECT,
+                                                    CNS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                    CONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                    CNS.REVIEW_COUNT
+                                                FROM
+                                                    COPILOT_NETSENTIMENT CNS
+                                                JOIN
+                                                    COPILOT_OVERALL_NETSENTIMENT CONS
+                                                ON
+                                                    CNS.PRODUCT_FAMILY = CONS.PRODUCT_FAMILY
+
+                                                UNION ALL
+
+                                                SELECT
+                                                    'Copilot' AS PRODUCT_FAMILY,
+                                                    'OVERALL' AS ASPECT,
+                                                    CONS.NET_SENTIMENT AS NET_SENTIMENT_ASPECT,
+                                                    CONS.NET_SENTIMENT AS NET_SENTIMENT_OVERALL,
+                                                    SUM(CNS.REVIEW_COUNT) AS REVIEW_COUNT
+                                                FROM
+                                                    COPILOT_NETSENTIMENT CNS
+                                                JOIN
+                                                    COPILOT_OVERALL_NETSENTIMENT CONS
+                                                ON
+                                                    CNS.PRODUCT_FAMILY = CONS.PRODUCT_FAMILY
+                                                GROUP BY
+                                                    CONS.PRODUCT_FAMILY, CONS.NET_SENTIMENT
+
+                                                ORDER BY
+                                                    REVIEW_COUNT DESC;
+
+                                                          
+                                    IMPORTANT NOTE : Product column only have : 'COPILOT','OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI' and Product_Family only have the versions of copilot and its competitor.
+                                    So Whenever user meant specific version of copilot : Take them from Product_Family and others you can take from Product.
+       
+                            3. End User UserCase - Comparison of Keywords :
                             
                             If a user asks anything regarding "End User Usercase" Aspect, follow the below SQL Query Template.
                             
@@ -769,7 +981,7 @@ def query_quant_classify2_compare(user_question, vector_store_path="combine_inde
         return data_1
     except Exception as e:
         err = f"An error occurred while generating response for quantitative review summarization: {e}"
-        return err
+        return errs
     
 
 
@@ -1707,11 +1919,11 @@ def classify(user_question):
 
 from openai import AzureOpenAI
 
-client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
-    api_version="2024-02-01",
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    )
+# client = AzureOpenAI(
+#     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+#     api_version="2024-02-01",
+#     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+#     )
     
 deployment_name='Surface_Analytics'
 
@@ -1984,11 +2196,11 @@ def check_history_length(a,last_response):
 
 from openai import AzureOpenAI
 
-client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
-    api_version="2024-02-01",
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    )
+# client = AzureOpenAI(
+#     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+#     api_version="2024-02-01",
+#     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+#     )
     
 deployment_name='Surface_Analytics'
 
@@ -2401,7 +2613,64 @@ def user_ques(user_question_1, user_question, classification, user_question_char
                 error = "Unable to fetch relevant details based on the provided input. Kindly refine your search query and try again!"
         else:
             print('No Flow')
+
+
+
+# Define the context globally
+suggestions_context = """
+Input:
+You are an AI Assistant for an AI tool designed to provide insightful follow-up questions based on the user's initial query. Follow the instructions below strictly:
+
+The AI tool has reviews data scraped from the web for different versions of Copilot:"Windows Copilot","Microsoft Copilot","GitHub Copilot","Copilot Pro","Copilot for Security","Copilot for Mobile","Copilot for Microsoft 365".
+The AI tool also has reviews data for competitors of different versions of Copilot: 'OpenAI GPT','Gemini AI','Claude AI','Google Bard','Vertex AI','Perplexity AI'.
+The reviews are analyzed to extract aspects and sentiments related to the following aspects: 'Interface',,'Connectivity','Personalization/Customization','Privacy','Compatibility','Generic','Innovation','Reliability','Productivity','Price','Text Summarization/Generation','Code Generation','Ease of Use','Performance'.
+Based on the user's previous response, which involved summarization, comparison, visualization, or generic queries about these reviews, suggest three follow-up prompts that the user can ask next to complete their story. Ensure the prompts cover a range of potential queries, including detailed summaries, aspect-wise comparisons, and more generic inquiries to provide a comprehensive understanding.
+
+Your goal is to generate three prompts that are mutually exclusive and advance the user's exploration of the data. Consider the natural progression of inquiry, ensuring that the prompts align with a logical story flow such as:
+    - Summarization
+    - Visualization
+    - Aspect-wise Net Sentiment
+    - Comparison between competitors
+    - Comparison within the same product family (e.g., different versions of Copilot)
+
+Example Previous User Response: "Can you summarize the reviews for Copilot highlighting the different aspects?"
+
+Model Task: Based on the provided previous user response, generate three related prompts that the user can ask next. These prompts should help the user delve deeper into the data to complete the story with sentiment data and should be related to the previous response.
+IMPORTANT: Use simple English for questions. """
+
+suggestions_interaction = """"""
+
+def prompt_suggestion(user_question):
+    global suggestions_context,suggestions_interaction
+    full_prompt = suggestions_context + suggestions_interaction + "\nQuestion:\n" + user_question + "\nAnswer:"
+    response = client.completions.create(
+        model=deployment_name,
+        prompt=full_prompt,
+        max_tokens=500,
+        temperature=0.3
+    )
+    # Extract the generated response
+    user_query = response.choices[0].text.strip()
+    # Update context with the latest interaction
+    suggestions_interaction += "\nQuestion:\n" + user_question + "\nAnswer:\n" + user_query
+    return user_query
+
             
+            
+def sugg_checkbox(user_question):
+    if not st.session_state.prompt_sugg:
+        questions = prompt_suggestion(user_question)
+        print(f"Prompt Suggestions: {questions}")
+        st.session_state.prompt_sugg = questions.split('\n')
+    checkbox_states = [st.checkbox(question) for question in st.session_state.prompt_sugg]
+    for i, state in enumerate(checkbox_states):
+        if state:
+            st.write(f"You selected: {st.session_state.prompt_sugg[i]}")
+            st.session_state.selected_sugg = st.session_state.prompt_sugg[i]
+            st.experimental_rerun()
+            break
+        st.session_state.selected_sugg = None
+    return st.session_state.selected_sugg
 
               
             
@@ -2427,48 +2696,61 @@ if __name__ == "__main__":
                         st.markdown(message["content"], unsafe_allow_html=True)
                     else:
                         st.markdown(message["content"])
-            if user_question := st.chat_input("Enter the Prompt: "):
-                st.chat_message("user").markdown(user_question)
-                st.session_state.messages.append({"role": "user", "content": user_question})
+            if user_inp := st.chat_input("Enter the Prompt: "):
+                st.session_state.selected_questions = user_inp
+                st.chat_message("user").markdown(st.session_state.selected_questions)
+                st.session_state.messages.append({"role": "user", "content": st.session_state.selected_questions})
+                
+            if st.session_state.selected_sugg:
+                st.session_state.selected_questions = st.session_state.selected_sugg
+                st.chat_message("user").markdown(st.session_state.selected_questions)
+                st.session_state.messages.append({"role": "user", "content": st.session_state.selected_questions})
+                st.session_state.selected_sugg = None
+                st.session_state.prompt_sugg = None
+            if st.session_state.selected_questions:
                 with st.chat_message("assistant"):
                     full_response = ""
-                    try:
-                        user_question = user_question.replace("Give me", "What is").replace("Give", "What is")
-                        user_question_chart= user_question
-                    except:
-                        pass
-                    classification = classify_prompts(user_question)
-                    print(classification)
-                    if classification != 'Generic':
-                        user_question_1 = rephrase_prompt(str(user_question))
-                        print(type(user_question_1))
-                        print(user_question_1)
-                        user_ques(str(user_question_1), user_question, classification, str(user_question_chart))
-                    else:
-                        user_question_1 = user_question
-                        try: 
-                            gen_ans = query_detailed_generic(user_question_1)
-                            st.write(gen_ans)
-                            Gen = query_quant_classify2_compare("Give me top 10 keywords with their review count  and % of positive, negative and neutral for the same keywords to answer : " +  user_question_1)
-                            print(Gen)
-                            st.dataframe(Gen)
-                            dic = Gen.to_dict(orient = "dict")
-                            Gen_Q = query_detailed_generic("Summarize reviews of keywords regarding " + user_question_1 + "Which have the following keyword data:" + str(dic))
-                            st.write(Gen_Q)
-                            full_response += Gen_Q
-                            history = check_history_length(history,Gen_Q)
-                            save_list(history)
-                        except Exception as e:
-                            print(e)
-                            print("I couldn't get there")
-                            gen_ans = query_detailed_generic(user_question_1)
-                            st.write(gen_ans)
-                            full_response += gen_ans
-                            history = check_history_length(history,gen_ans)
-                            save_list(history)
+                    if st.session_state.copilot_curr_ques != st.session_state.selected_questions:
+                        try:
+                            user_question = st.session_state.selected_questions.replace("Give me", "What is").replace("Give", "What is")
+                            user_question_chart= user_question
+                        except:
+                            pass
+                        classification = classify_prompts(user_question)
+                        print(classification)
+                        if classification != 'Generic':
+                            user_question_1 = rephrase_prompt(str(user_question))
+                            print(type(user_question_1))
+                            print(user_question_1)
+                            user_ques(str(user_question_1), user_question, classification, str(user_question_chart))
+                        else:
+                            user_question_1 = user_question
+                            try: 
+                                gen_ans = query_detailed_generic(user_question_1)
+                                st.write(gen_ans)
+                                Gen = query_quant_classify2_compare("Give me top 10 keywords with their review count  and % of positive, negative and neutral for the same keywords to answer : " +  user_question_1)
+                                print(Gen)
+                                st.dataframe(Gen)
+                                dic = Gen.to_dict(orient = "dict")
+                                Gen_Q = query_detailed_generic("Summarize reviews of keywords regarding " + user_question_1 + "Which have the following keyword data:" + str(dic))
+                                st.write(Gen_Q)
+                                full_response += Gen_Q
+                                history = check_history_length(history,Gen_Q)
+                                save_list(history)
+                            except Exception as e:
+                                print(e)
+                                print("I couldn't get there")
+                                gen_ans = query_detailed_generic(user_question_1)
+                                st.write(gen_ans)
+                                full_response += gen_ans
+                                history = check_history_length(history,gen_ans)
+                                save_list(history)
 
-                    st.session_state.messages.append({"role": "assistant", "content": full_response, "is_html": True})
-                st.session_state['chat_initiated'] = True
+                        st.session_state.messages.append({"role": "assistant", "content": full_response, "is_html": True})
+                    st.session_state.copilot_curr_ques = st.session_state.selected_questions
+                    if selected_options == "Copilot" and 'full_response' in globals():
+                        selected_questions = sugg_checkbox(full_response)
+                        st.session_state['chat_initiated'] = True
             if st.session_state['chat_initiated'] and st.button("New Chat"):
                 if os.path.exists(file_path):
                     os.remove(file_path)
