@@ -38,15 +38,15 @@ from fuzzywuzzy import process
 from rapidfuzz import process, fuzz
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-os.environ["AZURE_OPENAI_API_KEY"] = "4c9521eb62f8419db3291a776acce1c5"
-os.environ["AZURE_OPENAI_ENDPOINT"] = "https://fordmustang.openai.azure.com/"
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
 
 
 client = AzureOpenAI(
-     api_key=os.getenv("4c9521eb62f8419db3291a776acce1c5"),  
+     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
      api_version="2024-02-01",
-     azure_endpoint = os.getenv("https://fordmustang.openai.azure.com/")
+     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
      )
 
 deployment_name='Surface_Analytics'
