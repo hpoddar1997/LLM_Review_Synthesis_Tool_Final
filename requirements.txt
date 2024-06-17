@@ -101,5 +101,4 @@ pillow==10.2.0
 pyodbc==5.0.1
 fuzzywuzzy==0.18.0
 rapidfuzz==3.9.1
-
-
+tenacity==8.3.0
