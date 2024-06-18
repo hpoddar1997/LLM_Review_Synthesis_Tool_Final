@@ -70,10 +70,10 @@ Devices_Sentiment_Data_New = Devices_Sentiment_Data_New[Devices_Sentiment_Data_N
 
 if not hasattr(st.session_state, 'selected_devices'):
     st.session_state.selected_devices = [None,None]
-if not hasattr(st.session_state, 'past_inp'):
-    st.session_state.past_inp = None
-if not hasattr(st.session_state, 'past_inp_comp_dev'):
-    st.session_state.past_inp_comp_dev = []
+if not hasattr(st.session_state, 'past_inp2'):
+    st.session_state.past_inp2 = None
+if not hasattr(st.session_state, 'past_inp_comp_dev2'):
+    st.session_state.past_inp_comp_dev2 = []
 if not hasattr(st.session_state, 'display_history_devices'):
     st.session_state.display_history_devices = []
 if not hasattr(st.session_state, 'context_history_devices'):
@@ -1687,23 +1687,23 @@ def device_summarization_new(user_input):
         new_inp_check = False
         if not hasattr(st.session_state, 'selected_devices'):
             st.session_state.selected_devices = [None,None]
-        if not hasattr(st.session_state, 'past_inp'):
-            st.session_state.past_inp = None
-        if not hasattr(st.session_state, 'past_inp_comp_dev'):
-            st.session_state.past_inp_comp_dev = []
+        if not hasattr(st.session_state, 'past_inp2'):
+            st.session_state.past_inp2 = None
+        if not hasattr(st.session_state, 'past_inp_comp_dev2'):
+            st.session_state.past_inp_comp_dev2 = []
         if not hasattr(st.session_state, 'display_history_devices'):
             st.session_state.display_history_devices = []
         if not hasattr(st.session_state, 'context_history_devices'):
             st.session_state.context_history_devices = []
         if not hasattr(st.session_state, 'curr_response'):
             st.session_state.curr_response = ""
-        if (not st.session_state.past_inp) or (st.session_state.past_inp[0] != inp):
+        if (not st.session_state.past_inp2) or (st.session_state.past_inp2[0] != inp):
             new_inp_check = True
-            st.session_state.past_inp_comp_dev = []
+            st.session_state.past_inp_comp_dev2 = []
             device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices = generate_device_details_new(inp)
         else:
             new_inp_check = False
-            old_inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ = st.session_state.past_inp
+            old_inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ = st.session_state.past_inp2
         html_code = f"""
         <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center;">
             <div style="flex: 1; text-align: center;">
@@ -1726,7 +1726,7 @@ def device_summarization_new(user_input):
         if new_inp_check:
             st.session_state.curr_response+=f"{html_code}<br>"
             summ = get_detailed_summary_new(inp)
-            st.session_state.past_inp = (inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ)
+            st.session_state.past_inp2 = (inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ)
             st.session_state.curr_response+=f"Detailed Summary"
             st.session_state.curr_response+=f"<br>{summ}<br>"
             
@@ -1753,9 +1753,9 @@ def device_summarization_new(user_input):
                         if new_inp_check:
                             com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name = get_comp_device_details_new(comp_devices_list[i], comp_devices)
                             com_star_rating_html = get_star_rating_html_new(net_sentiment)
-                            st.session_state.past_inp_comp_dev.append((com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name,com_star_rating_html))
+                            st.session_state.past_inp_comp_dev2.append((com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name,com_star_rating_html))
                         else:
-                            com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name, com_star_rating_html = st.session_state.past_inp_comp_dev[i]
+                            com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name, com_star_rating_html = st.session_state.past_inp_comp_dev2[i]
                             
                         com_sent_dev_list[i] = com_sent_dev_name
                         with st.container(border = True, height = 300):
