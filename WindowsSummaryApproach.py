@@ -38,8 +38,11 @@ import streamlit as st
 from fuzzywuzzy import process
 from rapidfuzz import process, fuzz
 
+
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
 AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
+
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
 
@@ -368,6 +371,22 @@ def get_ASP_new(device_name):
         print(f"Error in getting ASP for {device_name}")
     return asp
 
+
+def get_date_range_new(device_name):
+    try:
+        device = get_sales_device_name(device_name)
+        device_sales_data = RCR_Sales_Data.loc[RCR_Sales_Data["Series"] == device]
+        device_sales_data['Month'] = pd.to_datetime(device_sales_data['Month'], format='%m/%d/%Y')
+        min_date = device_sales_data["Month"].min().strftime('%Y-%m-%d')
+        max_date = device_sales_data["Month"].max().strftime('%Y-%m-%d')
+    except:
+        min_date = "NA"
+        max_date = "NA"
+        print(f"Error occured in getting date range for sales data of {device_name}")
+    return min_date, max_date
+
+
+
 def get_highest_selling_specs_new(device_name):
     try:
         question = "What's highest selling Specs Combination for " + device_name
@@ -551,14 +570,14 @@ def get_final_df_devices_new(aspects_list,device):
     for aspect in aspects_list:
         # Construct the SQL query for the current aspect
         query = f"""
-        SELECT Summary,
+        SELECT Aspect_Description,
                COUNT(CASE WHEN Sentiment = 'Positive' THEN 1 END) AS Positive_Count,
                COUNT(CASE WHEN Sentiment = 'Negative' THEN 1 END) AS Negative_Count,
                COUNT(CASE WHEN Sentiment = 'Neutral' THEN 1 END) AS Neutral_Count,
                COUNT(*) as Total_Count
         FROM Devices_Sentiment_Data_New
         WHERE Aspect = '{aspect}' AND Product_Family LIKE '%{device}%'
-        GROUP BY Summary
+        GROUP BY Aspect_Description
         ORDER BY Total_Count DESC;
         """
 
@@ -570,7 +589,7 @@ def get_final_df_devices_new(aspects_list,device):
         key_df['Positive_Percentage'] = (key_df['Positive_Count'] / total_aspect_count) * 100
         key_df['Negative_Percentage'] = (key_df['Negative_Count'] / total_aspect_count) * 100
         key_df['Neutral_Percentage'] = (key_df['Neutral_Count'] / total_aspect_count) * 100
-        key_df['Summary_Contribution'] = (key_df['Total_Count'] / total_aspect_count) * 100
+        key_df['Aspect_Description_Contribution'] = (key_df['Total_Count'] / total_aspect_count) * 100
 
         # Drop the count columns
         key_df = key_df.drop(['Positive_Count', 'Negative_Count', 'Neutral_Count', 'Total_Count'], axis=1)
@@ -579,7 +598,7 @@ def get_final_df_devices_new(aspects_list,device):
         key_df['Aspect'] = aspect
 
         # Sort by 'Keyword_Contribution' and select the top 2 for the current aspect
-        key_df = key_df.sort_values(by='Summary_Contribution', ascending=False).head(2)
+        key_df = key_df.sort_values(by='Aspect_Description_Contribution', ascending=False).head(2)
 
         # Append the results to the final DataFrame
         final_df = pd.concat([final_df, key_df], ignore_index=True)
@@ -593,8 +612,8 @@ def get_conversational_chain_detailed_summary_devices_new():
         1. Your Job is to analyse the Net Sentiment, Aspect wise sentiment and Key word regarding the different aspect and summarize the reviews that user asks for utilizing the reviews and numbers you get. Use maximum use of the numbers and Justify the numbers using the reviews.
         
         Your will receive Aspect wise net sentiment of the device. you have to concentrate on top 4 Aspects.
-        For that top 4 Aspect you will get top 2 Summary for each aspect. You will receive each Summary's contribution and +ve mention % and negative mention %
-        You will receive reviews of that devices focused on these aspects and summary.
+        For that top 4 Aspect you will get top 2 Aspect_Description (which you can consider as summary) for each aspect. You will receive each Aspect_Description's contribution and +ve mention % and negative mention %
+        You will receive reviews of that devices focused on these aspects and Aspect_Descriptions.
         
         For Each Aspect
         
@@ -603,15 +622,15 @@ def get_conversational_chain_detailed_summary_devices_new():
 
             IMPORTANT: Use only the data provided to you and do not rely on pre-trained documents.
 
-            Your summary should justify the above conditions and tie in with the net sentiment and aspect sentiment and summary. Mention the difference between Net Sentiment and Aspect Sentiment (e.g., -2% or +2% higher than net sentiment) in your summary and provide justification.
+            Your summary should justify the above conditions and tie in with the net sentiment and aspect sentiment and Aspect_Description. Mention the difference between Net Sentiment and Aspect Sentiment (e.g., -2% or +2% higher than net sentiment) in your summary and provide justification.
             
             Your response should be : 
             
             For Each Aspect 
                     Net Sentiment of the device and aspect sentiment of that aspect of the device (Mention Performance, Aspect Sentiment) . 
-                    Top Summary contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this Summary in 2 to 3 lines detailed
-                    Top 2nd Summary contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this Summary in 2 to 3 lines detailed
-                       Limit yourself to top 3 Summary and don't mention as top 1, top 2, top 3 and all. Mention them as pointers
+                    Top Aspect_Description contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this Aspect_Description in 2 to 3 lines detailed
+                    Top 2nd Aspect_Description contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this Aspect_Description in 2 to 3 lines detailed
+                       Limit yourself to top 3 Aspect_Description and don't mention as top 1, top 2, top 3 and all. Mention them as pointers
                     Overall Summary
             
             IMPORTANT : Example Template :
@@ -632,16 +651,16 @@ def get_conversational_chain_detailed_summary_devices_new():
 
                         Price:
                         - The aspect sentiment for price is 52.8%, which is higher than the net sentiment of 38.5%. This indicates that the aspect of price is driving the net sentiment higher for the Vivobook.
-                        -  The top Summary for price is "Budget friendly" with a contribution of 28.07%.
+                        -  The top Aspect_Description for price is "Budget friendly" with a contribution of 28.07%.
                               - Users mentioned that the Vivobook offers good value for the price and is inexpensive.
-                        - Another top Summary for price is "Affordable Price" with a contribution of 26.89%. 
+                        - Another top Aspect_Description for price is "Affordable Price" with a contribution of 26.89%. 
                             - Users praised the affordable price of the Vivobook and mentioned that it is worth the money.
 
                         Performance:
                         - The aspect sentiment for performance is 36.5%, which is lower than the net sentiment of 38.5%. This indicates that the aspect of performance is driving the net sentiment lower for the Vivobook.
-                        - The top Summary for performance is "Reliable Performance" with a contribution of 18.24%.
+                        - The top Aspect_Description for performance is "Reliable Performance" with a contribution of 18.24%.
                             - Users mentioned that the Vivobook is fast and offers good speed.
-                        - Another top Summary for performance is "Performance Issues" with a contribution of 12.06%.
+                        - Another top Aspect_Description for performance is "Performance Issues" with a contribution of 12.06%.
                             - Users have reported certain performance issues for Vivobook.
                                             
                                             
@@ -663,7 +682,7 @@ def get_conversational_chain_detailed_summary_devices_new():
                     - Users have praised the gaming experience on the Lenovo Legion, with many mentioning the smooth gameplay and high FPS.
                     - Some users have reported experiencing lag while gaming, but overall, the gaming performance is highly rated.
                     
-                Top 3 Summary : Their Contribution, Postitive mention % and Negative mention % and one ot two positive mentions regarding this Summary in each pointer
+                Top 3 Aspect_Descriptions : Their Contribution, Postitive mention % and Negative mention % and one ot two positive mentions regarding this Aspect_Descriptions in each pointer
                 
                 5. IMPORTANT : Pros and Cons in pointers (overall, not related to any aspect)
                 6. Overall Summary
@@ -774,7 +793,7 @@ def get_conversational_chain_summary_new():
     Keywords: Keywords mentioned in the review.
     Review_Count: Will be 1 for each review or row.
     Sentiment_Score: Will be 1, 0, or -1 based on the sentiment.
-    Summary: two to four word summary of the review.
+    Aspect_Description: two to four word summary of the review.
     
     Please ensure that the response is based on the analysis of the provided dataset, summarizing both positive and negative aspects of each product.
     Important: Generate outputs using the provided dataset only, don't use pre-trained information to generate outputs.\n
@@ -1074,7 +1093,7 @@ IMPORTANT : If a user is asking about which is best/poor, everything should be b
                                 (SELECT * FROM C1 
                                 UNION
                                 SELECT * FROM C2)
-                                ORDER BY Aspect asc, Feature desc;
+                                ORDER BY Feature desc, Review_Count desc;
                                 
                     IMPORTANT: If the user is asking any questions related to summary, you should always interpret summary as 'Aspect_Description' column
         
@@ -1580,6 +1599,7 @@ def device_details_new(device):
     aspects = ['Performance', 'Design', 'Display', 'Battery', 'Price', 'Software']
     with st.container(border = True):
         if device_name:
+            min_date, max_date = get_date_range_new(device_name)
             with st.container(border = False,height = 200):
                 col1, inter_col_space, col2 = st.columns((1, 4, 1))
                 with inter_col_space:
@@ -1592,10 +1612,11 @@ def device_details_new(device):
                 st.header(device_name)
             with st.container(height=50, border = False):
                 st.markdown(star_rating_html, unsafe_allow_html=True)
-            with st.container(height=165, border = False):
+            with st.container(height=225, border = False):
                 st.write(f"Total Devices Sold: {total_sales}")
                 st.write(f"Average Selling Price: {asp}")
                 st.write(f"Highest Selling Specs: {high_specs} - {sale}")
+                st.markdown(f"<p style='font-size:12px;'>*sales data is from {min_date} to {max_date}</p>", unsafe_allow_html=True)
             with st.container(height=300, border = False):
                 st.subheader('Aspect Ratings')
                 asp_rating = []
@@ -1846,7 +1867,7 @@ Quant:
          IMPORTANT : Whenver user asks about any top or bottom aspects or other things like keywords choose this category
                    
         -Choose this category if the user asks for distinct aspect summaries across a particular aspect for a product_family
-         Any type of quantitative or numerical questions involving summary or summaries across aspects or aspect wise summaries should fall in this category.  
+         Any type of quantitative or numerical questions involving summary or aspect descriptions or summaries across aspects or aspect wise summaries should fall in this category.  
         (e.g., "What are the different aspect wise summaries of Microsoft Surface Pro?",
         "Generate the aspect summaries for different aspects of Asus Vivobook",
         "Give me the summaries for different aspects of Lenovo Laptops", etc.)
@@ -2065,7 +2086,7 @@ def get_conversational_chain_quant_devices_new():
         
         1. Your Job is to convert the user question to SQL Query (Follow Microsoft SQL server SSMS syntax.). You have to give the query so that it can be used on Microsoft SQL server SSMS.You have to only return query as a result.
             2. There is only one table with table name Devices_Sentiment_Data_New where each row is a user review. The table has 13 columns, they are:
-                Review: Review of the Copilot Product
+                Review: Review of the Windows Product
                 Data_Source: From where is the review taken. It contains different retailers
                 Geography: From which Country or Region the review was given. It contains different Grography.
                 Title: What is the title of the review
@@ -2077,7 +2098,7 @@ def get_conversational_chain_quant_devices_new():
                 Keyword: What are the keywords mentioned in the product
                 Review_Count - It will be 1 for each review or each row
                 Sentiment_Score - It will be 1, 0 or -1 based on the Sentiment.
-                Summary - two to four word summary of the review.
+                Aspect_Description - two to four word summary of the review.
                 
             3. Sentiment mark is calculated by sum of Sentiment_Score.
             4. Net sentiment is calculcated by sum of Sentiment_Score divided by sum of Review_Count. It should be in percentage. Example:
@@ -2155,129 +2176,129 @@ def query_quant_devices_new(user_question, vector_store_path="faiss_index_window
     
     
     
-def get_conversational_chain_detailed_summary_devices_new():
-    try:
+# def get_conversational_chain_detailed_summary_devices_new():
+#     try:
         
-        prompt_template = """
-        1. Your Job is to analyse the Net Sentiment, Aspect wise sentiment and Key word regarding the different aspect and summarize the reviews that user asks for utilizing the reviews and numbers you get. Use maximum use of the numbers and Justify the numbers using the reviews.
+#         prompt_template = """
+#         1. Your Job is to analyse the Net Sentiment, Aspect wise sentiment and Key word regarding the different aspect and summarize the reviews that user asks for utilizing the reviews and numbers you get. Use maximum use of the numbers and Justify the numbers using the reviews.
         
-        Your will receive Aspect wise net sentiment of the device. you have to concentrate on top 4 Aspects.
-        For that top 4 Aspect you will get top 2 keywords for each aspect. You will receive each keywords' contribution and +ve mention % and negative mention %
-        You will receive reviews of that devices focused on these aspects and keywords.
+#         Your will receive Aspect wise net sentiment of the device. you have to concentrate on top 4 Aspects.
+#         For that top 4 Aspect you will get top 2 keywords for each aspect. You will receive each keywords' contribution and +ve mention % and negative mention %
+#         You will receive reviews of that devices focused on these aspects and keywords.
         
-        For Each Aspect
+#         For Each Aspect
         
-        Condition 1 : If the net sentiment is less than aspect sentiment, which means that particular aspect is driving the net sentiment Higher for that device. In this case provide why the aspect sentiment is lower than net sentiment.
-        Condition 2 : If the net sentiment is high than aspect sentiment, which means that particular aspect is driving the net sentiment Lower for that device. In this case provide why the aspect sentiment is higher than net sentiment. 
+#         Condition 1 : If the net sentiment is less than aspect sentiment, which means that particular aspect is driving the net sentiment Higher for that device. In this case provide why the aspect sentiment is lower than net sentiment.
+#         Condition 2 : If the net sentiment is high than aspect sentiment, which means that particular aspect is driving the net sentiment Lower for that device. In this case provide why the aspect sentiment is higher than net sentiment. 
 
-            IMPORTANT: Use only the data provided to you and do not rely on pre-trained documents.
+#             IMPORTANT: Use only the data provided to you and do not rely on pre-trained documents.
 
-            Your summary should justify the above conditions and tie in with the net sentiment and aspect sentiment and keywords. Mention the difference between Net Sentiment and Aspect Sentiment (e.g., -2% or +2% higher than net sentiment) in your summary and provide justification.
+#             Your summary should justify the above conditions and tie in with the net sentiment and aspect sentiment and keywords. Mention the difference between Net Sentiment and Aspect Sentiment (e.g., -2% or +2% higher than net sentiment) in your summary and provide justification.
             
-            Your response should be : 
+#             Your response should be : 
             
-            For Each Aspect 
-                    Net Sentiment of the device and aspect sentiment of that aspect of the device (Mention Performance, Aspect Sentiment) . 
-                    Top Keyword contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this keywords in 2 to 3 lines detailed
-                    Top 2nd Keyword contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this keywords in 2 to 3 lines detailed
-                       Limit yourself to top 3 keywords and don't mention as top 1, top 2, top 3 and all. Mention them as pointers
-                    Overall Summary
+#             For Each Aspect 
+#                     Net Sentiment of the device and aspect sentiment of that aspect of the device (Mention Performance, Aspect Sentiment) . 
+#                     Top Keyword contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this keywords in 2 to 3 lines detailed
+#                     Top 2nd Keyword contribution and their positive and negative percentages and summarize Reviews what user have spoken regarding this keywords in 2 to 3 lines detailed
+#                        Limit yourself to top 3 keywords and don't mention as top 1, top 2, top 3 and all. Mention them as pointers
+#                     Overall Summary
             
-            IMPORTANT : Example Template :
+#             IMPORTANT : Example Template :
             
-            ALWAYS FOLLOW THIS TEMPLATE : Don't miss any of the below:
+#             ALWAYS FOLLOW THIS TEMPLATE : Don't miss any of the below:
                                     
-            Response : "BOLD ALL THE NUMBERS"
+#             Response : "BOLD ALL THE NUMBERS"
             
-            IMPOPRTANT : Start with : "These are the 4 major aspects users commented about" and mention their review count contributions
+#             IMPOPRTANT : Start with : "These are the 4 major aspects users commented about" and mention their review count contributions
                
-                           These are the 4 major aspects users commented about:
+#                            These are the 4 major aspects users commented about:
                            
-                        - Total Review for Vivobook Device is 1200
-                        - Price: 13.82% of the reviews mentioned this aspect
-                        - Performance: 11.08% of the reviews mentioned this aspect
-                        - Software: 9.71% of the reviews mentioned this aspect
-                        - Design: 7.37% of the reviews mentioned this aspect
+#                         - Total Review for Vivobook Device is 1200
+#                         - Price: 13.82% of the reviews mentioned this aspect
+#                         - Performance: 11.08% of the reviews mentioned this aspect
+#                         - Software: 9.71% of the reviews mentioned this aspect
+#                         - Design: 7.37% of the reviews mentioned this aspect
 
-                        Price:
-                        - The aspect sentiment for price is 52.8%, which is higher than the net sentiment of 38.5%. This indicates that the aspect of price is driving the net sentiment higher for the Vivobook.
-                        -  The top keyword for price is "buy" with a contribution of 28.07%. It has a positive percentage of 13.44% and a negative percentage of 4.48%.
-                              - Users mentioned that the Vivobook offers good value for the price and is inexpensive.
-                        - Another top keyword for price is "price" with a contribution of 26.89%. It has a positive percentage of 23.35% and a negative percentage of 0.24%.
-                            - Users praised the affordable price of the Vivobook and mentioned that it is worth the money.
+#                         Price:
+#                         - The aspect sentiment for price is 52.8%, which is higher than the net sentiment of 38.5%. This indicates that the aspect of price is driving the net sentiment higher for the Vivobook.
+#                         -  The top keyword for price is "buy" with a contribution of 28.07%. It has a positive percentage of 13.44% and a negative percentage of 4.48%.
+#                               - Users mentioned that the Vivobook offers good value for the price and is inexpensive.
+#                         - Another top keyword for price is "price" with a contribution of 26.89%. It has a positive percentage of 23.35% and a negative percentage of 0.24%.
+#                             - Users praised the affordable price of the Vivobook and mentioned that it is worth the money.
 
-                        Performance:
-                        - The aspect sentiment for performance is 36.5%, which is lower than the net sentiment of 38.5%. This indicates that the aspect of performance is driving the net sentiment lower for the Vivobook.
-                        - The top keyword for performance is "fast" with a contribution of 18.24%. It has a positive percentage of 16.76% and a neutral percentage of 1.47%.
-                            - Users mentioned that the Vivobook is fast and offers good speed.
-                        - Another top keyword for performance is "speed" with a contribution of 12.06%. It has a positive percentage of 9.12% and a negative percentage of 2.06%.
-                            - Users praised the speed of the Vivobook and mentioned that it is efficient.
+#                         Performance:
+#                         - The aspect sentiment for performance is 36.5%, which is lower than the net sentiment of 38.5%. This indicates that the aspect of performance is driving the net sentiment lower for the Vivobook.
+#                         - The top keyword for performance is "fast" with a contribution of 18.24%. It has a positive percentage of 16.76% and a neutral percentage of 1.47%.
+#                             - Users mentioned that the Vivobook is fast and offers good speed.
+#                         - Another top keyword for performance is "speed" with a contribution of 12.06%. It has a positive percentage of 9.12% and a negative percentage of 2.06%.
+#                             - Users praised the speed of the Vivobook and mentioned that it is efficient.
                                             
                                             
-                        lIKE THE ABOVE ONE EXPLAIN OTHER 2 ASPECTS
+#                         lIKE THE ABOVE ONE EXPLAIN OTHER 2 ASPECTS
 
-                        Overall Summary:
-                        The net sentiment for the Vivobook is 38.5%, while the aspect sentiment for price is 52.8%, performance is 36.5%, software is 32.2%, and design is 61.9%. This indicates that the aspects of price and design are driving the net sentiment higher, while the aspects of performance and software are driving the net sentiment lower for the Vivobook. Users mentioned that the Vivobook offers good value for the price, is fast and efficient in performance, easy to set up and use in terms of software, and has a sleek and high-quality design.
+#                         Overall Summary:
+#                         The net sentiment for the Vivobook is 38.5%, while the aspect sentiment for price is 52.8%, performance is 36.5%, software is 32.2%, and design is 61.9%. This indicates that the aspects of price and design are driving the net sentiment higher, while the aspects of performance and software are driving the net sentiment lower for the Vivobook. Users mentioned that the Vivobook offers good value for the price, is fast and efficient in performance, easy to set up and use in terms of software, and has a sleek and high-quality design.
   
-                        Some Pros and Cons of the device, 
+#                         Some Pros and Cons of the device, 
                         
                         
-           IMPORTANT : Do not ever change the above template of Response. Give Spaces accordingly in the response to make it more readable.
+#            IMPORTANT : Do not ever change the above template of Response. Give Spaces accordingly in the response to make it more readable.
            
-           A Good Response should contains all the above mentioned poniters in the example. 
-               1. Net Sentiment and The Aspect Sentiment
-               2. Total % of mentions regarding the Aspect
-               3. A Quick Summary of whether the aspect is driving the sentiment high or low
-               4. Top Keyword: Gaming (Contribution: 33.22%, Positive: 68.42%, Negative: 6.32%)
-                    - Users have praised the gaming experience on the Lenovo Legion, with many mentioning the smooth gameplay and high FPS.
-                    - Some users have reported experiencing lag while gaming, but overall, the gaming performance is highly rated.
+#            A Good Response should contains all the above mentioned poniters in the example. 
+#                1. Net Sentiment and The Aspect Sentiment
+#                2. Total % of mentions regarding the Aspect
+#                3. A Quick Summary of whether the aspect is driving the sentiment high or low
+#                4. Top Keyword: Gaming (Contribution: 33.22%, Positive: 68.42%, Negative: 6.32%)
+#                     - Users have praised the gaming experience on the Lenovo Legion, with many mentioning the smooth gameplay and high FPS.
+#                     - Some users have reported experiencing lag while gaming, but overall, the gaming performance is highly rated.
                     
-                Top 3 Keywords : Their Contribution, Postitive mention % and Negative mention % and one ot two positive mentions regarding this keywords in each pointer
+#                 Top 3 Keywords : Their Contribution, Postitive mention % and Negative mention % and one ot two positive mentions regarding this keywords in each pointer
                 
-                5. IMPORTANT : Pros and Cons in pointers (overall, not related to any aspect)
-                6. Overall Summary
+#                 5. IMPORTANT : Pros and Cons in pointers (overall, not related to any aspect)
+#                 6. Overall Summary
 
                     
-          Enhance the model’s comprehension to accurately interpret user queries by:
-          Recognizing abbreviations for country names (e.g., ‘DE’ for Germany, ‘USA’or 'usa' or 'US' for the United States of America) and expanding them to their full names for clarity.
-          Understanding product family names even when written in reverse order or missing connecting words (e.g., ‘copilot in windows 11’ as ‘copilot windows’ and ‘copilot for security’ as ‘copilot security’ etc.).
-          Utilizing context and available data columns to infer the correct meaning and respond appropriately to user queries involving variations in product family names or geographical references
-          Please provide a comprehensive Review summary, feature comparison, feature suggestions for specific product families and actionable insights that can help in product development and marketing strategies.
-          Generate acurate response only, do not provide extra information.
-          \nFollowing is the previous conversation from User and Response, use it to get context only:""" + str(st.session_state.context_history_devices) + """\n
-                Use the above conversation chain to gain context if the current prompt requires context from previous conversation.\n. When user asks uses references like "from previous response", ":from above response" or "from above", Please refer the previous conversation and respond accordingly.\n
+#           Enhance the model’s comprehension to accurately interpret user queries by:
+#           Recognizing abbreviations for country names (e.g., ‘DE’ for Germany, ‘USA’or 'usa' or 'US' for the United States of America) and expanding them to their full names for clarity.
+#           Understanding product family names even when written in reverse order or missing connecting words (e.g., ‘copilot in windows 11’ as ‘copilot windows’ and ‘copilot for security’ as ‘copilot security’ etc.).
+#           Utilizing context and available data columns to infer the correct meaning and respond appropriately to user queries involving variations in product family names or geographical references
+#           Please provide a comprehensive Review summary, feature comparison, feature suggestions for specific product families and actionable insights that can help in product development and marketing strategies.
+#           Generate acurate response only, do not provide extra information.
+#           \nFollowing is the previous conversation from User and Response, use it to get context only:""" + str(st.session_state.context_history_devices) + """\n
+#                 Use the above conversation chain to gain context if the current prompt requires context from previous conversation.\n. When user asks uses references like "from previous response", ":from above response" or "from above", Please refer the previous conversation and respond accordingly.\n
             
-            Important: Generate outputs using the provided dataset only, don't use pre-trained information to generate outputs.\n
-        Context:\n {context}?\n
-        Question: \n{question}\n
+#             Important: Generate outputs using the provided dataset only, don't use pre-trained information to generate outputs.\n
+#         Context:\n {context}?\n
+#         Question: \n{question}\n
 
-        Answer:
-        """
-        prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-        model = AzureChatOpenAI(
-            azure_deployment=azure_deployment_name,
-            api_version='2023-12-01-preview',
-            temperature = 0.0)
-        chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-        return chain
-    except:
-        err = f"An error occurred while getting conversation chain for detailed review summarization."
-        print(f"Error in getting conversation chain for detailed device details.")
-        return err
+#         Answer:
+#         """
+#         prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+#         model = AzureChatOpenAI(
+#             azure_deployment=azure_deployment_name,
+#             api_version='2023-12-01-preview',
+#             temperature = 0.0)
+#         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
+#         return chain
+#     except:
+#         err = f"An error occurred while getting conversation chain for detailed review summarization."
+#         print(f"Error in getting conversation chain for detailed device details.")
+#         return err
     
-# Function to handle user queries using the existing vector store
-def query_detailed_summary_devices_new(user_question, vector_store_path="faiss_index_windows_116K_Summary_Final"):
-    try:
-        embeddings = AzureOpenAIEmbeddings(azure_deployment=azure_embedding_name)
-        vector_store = FAISS.load_local(vector_store_path, embeddings, allow_dangerous_deserialization=True)
-        chain = get_conversational_chain_detailed_summary_devices_new()
-        docs = vector_store.similarity_search(user_question)
-        response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-        return response["output_text"]
-    except:
-        err = f"An error occurred while getting LLM response for detailed review summarization."
-        print(f"Error in getting detailed summary for {user_question}")
-        return err
+# # Function to handle user queries using the existing vector store
+# def query_detailed_summary_devices_new(user_question, vector_store_path="faiss_index_windows_116K_Summary_Final"):
+#     try:
+#         embeddings = AzureOpenAIEmbeddings(azure_deployment=azure_embedding_name)
+#         vector_store = FAISS.load_local(vector_store_path, embeddings, allow_dangerous_deserialization=True)
+#         chain = get_conversational_chain_detailed_summary_devices_new()
+#         docs = vector_store.similarity_search(user_question)
+#         response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+#         return response["output_text"]
+#     except:
+#         err = f"An error occurred while getting LLM response for detailed review summarization."
+#         print(f"Error in getting detailed summary for {user_question}")
+#         return err
     
 def get_conversational_chain_quant_classify2_compare_devices_new():
     global model
@@ -2293,8 +2314,8 @@ def get_conversational_chain_quant_classify2_compare_devices_new():
                     Geography: This column lists the countries of the users who provided the reviews, allowing for an analysis of regional preferences and perceptions of the products.
                     Product_Family: This column identifies the broader category of products to which the review pertains, enabling comparisons and trend analysis across different product families.
                     Sentiment: This column reflects the overall tone of the review, whether positive, negative, or neutral, and is crucial for gauging customer sentiment.
-                    Sentiment: This column reflects the overall tone of the review, whether positive, negative, or neutral, and is crucial for gauging customer sentiment.
                     Aspect: This column highlights the particular features or attributes of the product that the review discusses, pinpointing areas of strength or concern.These are the aspects for present in the table. Generic, Design, Software, Performance, Price, Hardware, Display, Hardware, Display, Battery, Keyboard, Storage/Memory, Connectivity, Gaming, Customer-Service, Browser, Audio-Microphone, Ports, Camera, Account, Graphics, Touchpad.
+                    Aspect_Description: 2 to 3 word summary for the review
                 
         IMPORTANT : You will get the user prompt and also you will get the exact device names also so rephrase that by yourself with the proper product family names.
                     Example : You will get like -Compare Battery aspect sentiment of Microsoft Surface pro, Microsoft Surface go and hp Pavillon. MICROSOFT SURFACE LAPTOP GO 3 12, MICROSOFT SURFACE PRO 9 13, HP PAVILON 15. 
@@ -2485,8 +2506,8 @@ def query_quant_classify2_compare_devices_new(user_question, vector_store_path="
         response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
         SQL_Query = response["output_text"]
         # st.write(SQL_Query)
-        SQL_Query = convert_top_to_limit(SQL_Query)
-        SQL_Query = process_tablename(SQL_Query,"Devices_Sentiment_Data_New")
+        SQL_Query = convert_top_to_limit_new(SQL_Query)
+        SQL_Query = process_tablename_new(SQL_Query,"Devices_Sentiment_Data_New")
         print(SQL_Query)
         # st.write(SQL_Query)
         data = ps.sqldf(SQL_Query, globals())

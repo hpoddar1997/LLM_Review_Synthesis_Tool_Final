@@ -38,9 +38,10 @@ from fuzzywuzzy import process
 from rapidfuzz import process, fuzz
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
-AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
+
+AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
 
 client = AzureOpenAI(
@@ -2022,7 +2023,7 @@ def get_conversational_chain_quant_devices():
         
         1. Your Job is to convert the user question to SQL Query (Follow Microsoft SQL server SSMS syntax.). You have to give the query so that it can be used on Microsoft SQL server SSMS.You have to only return query as a result.
             2. There is only one table with table name Devices_Sentiment_Data where each row is a user review. The table has 10 columns, they are:
-                Review: Review of the Copilot Product
+                Review: Review of the Windows Product
                 Data_Source: From where is the review taken. It contains different retailers
                 Geography: From which Country or Region the review was given. It contains different Grography.
                 Title: What is the title of the review
