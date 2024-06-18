@@ -61,17 +61,25 @@ if not history:
     print("First run, initializing the list.")
     history = []  # Initialize as empty list
 else:
-    print("Not the first run, list loaded from file.")    
+    print("Not the first run, list loaded from file.")
+    
     
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
+
+############## DON'T FORGET TO DELETE THIS ###############
+
+
 
 client = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
     api_version="2024-02-01",
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     )
+
+############## DELETE UNTIL HERE ###############
+
 
 global model
 model = AzureChatOpenAI(
@@ -2054,9 +2062,11 @@ def classify_prompts(user_question):
     # Update context with the latest interaction
     context_Prompt += "\nQuestion:\n" + user_question + "\nAnswer:\n" + user_query
     
-    return user_query         
+    return user_query   
+        
         
 #-----------------------------------------------------------------------------------------Comparision------------------------------------------------------------------------------------#
+
 
 def get_conversational_chain_detailed_compare():
     global model
@@ -2598,6 +2608,8 @@ def user_ques(user_question_1, user_question, classification, user_question_char
         else:
             print('No Flow')
 
+
+
 # Define the context globally
 suggestions_context = """
 Input:
@@ -2636,6 +2648,7 @@ def prompt_suggestion(user_question):
     # Update context with the latest interaction
     suggestions_interaction += "\nQuestion:\n" + user_question + "\nAnswer:\n" + user_query
     return user_query
+
             
             
 def sugg_checkbox(user_question):
@@ -2654,6 +2667,7 @@ def sugg_checkbox(user_question):
             break
         st.session_state.selected_sugg = None
     return st.session_state.selected_sugg
+
               
             
 global full_response
