@@ -163,10 +163,6 @@ def convert_top_to_limit(sql):
         err = f"An error occurred while converting Top to Limit in SQL Query: {e}"
         return err
 
-
-# In[5]:
-
-
 def process_tablename(sql, table_name):
     try:
         x = sql.upper()
@@ -184,8 +180,7 @@ def process_tablename(sql, table_name):
         return query
     except Exception as e:
         err = f"An error occurred while processing table name in SQL query: {e}"
-        return err
-        
+        return err        
  
 #-------------------------------------------------------------------------------------------------------Summarization-------------------------------------------------------------------------------------------------------#
  
@@ -203,7 +198,7 @@ def get_conversational_chain_quant():
                     - Title: Title of the review
                     - Review_Date: Date on which the review was posted
                     - Product: Corresponding product for the review. The possible values are 'COPILOT','OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
-                    - Product_Family: Version or type of the corresponding product for which the review was posted. The possible values are: 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
+                    - Product_Family: Version or type of the corresponding product for which the review was posted. The possible values are: 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Edge Copilot', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
                     - Sentiment: Sentiment of the review. The possible values are: 'positive', 'neutral', 'negative'
                     - Aspect: Aspect or feature of the product being reviewed. The possible values are: 'Interface', 'Connectivity', 'Privacy', 'Compatibility', 'Generic', 'Innovation', 'Reliability', 'Productivity', 'Price', 'Text Summarization/Generation', 'Code Generation', 'Ease of Use', 'Performance', 'Personalization/Customization', 'Accessibility','End User Usecase'
                     - Keywords: Keywords mentioned in the review
@@ -231,7 +226,8 @@ def get_conversational_chain_quant():
         4. If an user is asking for Summarize reviews of any product. Note that user is not seeking for reviews, user is seeking for all the Quantitative results product(Net Sentiment & Review Count) and also (Aspect wise sentiment and Aspect wise review count). So choose to Provide Net Sentiment and Review Count and Aspect wise sentiment and their respective review count and Union them in single table
         
         5. IMPORTANT : REMEMBER THAT ALL THE NAMES IN PRODUCT_FAMILIES ARE NOT DIFFERENT VERSION OF COPILOT, THERE ARE SOME COMPETITORS AS WELL.
-            5.1 IMPORTANT : Different Product families/versions of copilot is 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile'
+            5.1 IMPORTANT : 1. Different Product families/versions of copilot is 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile'.
+                            2. Competitors of various versions of Copilot are : 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
             5.2 IMPORTANT : Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
          
             IMPORTANT : User can confuse a lot, but understand the question carefully and respond:
@@ -528,7 +524,7 @@ def get_conversational_chain_quant_classify2_compare():
                     - Title: Title of the review
                     - Review_Date: Date on which the review was posted
                     - Product: Corresponding product for the review. The possible values are 'COPILOT','OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
-                    - Product_Family: Version or type of the corresponding product for which the review was posted. The possible values are: 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
+                    - Product_Family: Version or type of the corresponding product for which the review was posted. The possible values are: 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Edge Copilot', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'
                     - Sentiment: Sentiment of the review. The possible values are: 'positive', 'neutral', 'negative'
                     - Aspect: Aspect or feature of the product being reviewed. The possible values are: 'Interface', 'Connectivity', 'Privacy', 'Compatibility', 'Generic', 'Innovation', 'Reliability', 'Productivity', 'Price', 'Text Summarization/Generation', 'Code Generation', 'Ease of Use', 'Performance', 'Personalization/Customization', 'Accessibility','End User Usecase'
                     - Keywords: Keywords mentioned in the review
@@ -552,7 +548,8 @@ def get_conversational_chain_quant_classify2_compare():
                         
                     IMPORTANT : REMEMBER THAT ALL THE NAMES IN PRODUCT_FAMILIES ARE NOT DIFFERENT VERSION OF COPILOT, THERE ARE SOME COMPETITORS AS WELL.
                     IMPORTANT : Different Product families/versions of copilot is 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile'
-                    IMPORTANT : Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
+                    IMPORTANT : Competitors of Copilot are 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
+                    IMPORTANT : Competitors of various versions of Copilot are : 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
                     
                     IMPORTANT : User can confuse a lot, but understand the question carefully and respond:
             Example : I am a story writer , Can you tell me which AI is good for writing stories based on user reviews? -> In this case, user confuses by telling that he is a story teller and all but he just needs to know "What is the best AI for Text Generation" -> Which is again decided based on comparison.
@@ -562,7 +559,7 @@ def get_conversational_chain_quant_classify2_compare():
                     You should be carefull while rephrasing it.
                    
                     
-                IMPORTANT : Out of these Product Family Names, it can be segregated into 2 things : One is Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile] and the other ones are Competitors of copilot like ['OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI']
+                IMPORTANT : Out of these Product Family Names, it can be segregated into 2 things : One is Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile] and the other ones are Competitors of copilot like ['Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.]
                 
                 So, whenever user asks for compare different versions of copilot, the user meant compare Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile]
                 
@@ -869,7 +866,7 @@ def get_conversational_chain_quant_classify2_compare():
                                                     REVIEW_COUNT DESC;
 
                                                           
-                                    IMPORTANT NOTE : Product column only have : 'COPILOT','OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI' and Product_Family only have the versions of copilot and its competitor.
+                                    IMPORTANT NOTE : Product column only have : 'COPILOT','OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI' and Product_Family only have the versions of copilot and its competitors they are : 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'..
                                     So Whenever user meant specific version of copilot : Take them from Product_Family and others you can take from Product.
        
                             3. End User UserCase - Comparison of Keywords :
@@ -982,22 +979,23 @@ def get_conversational_chain_quant_classify2():
         prompt_template = """
 
                 You are an AI Chatbot assistant. Understand the user question carefully and follow all the instructions mentioned below. The data contains Copilot and the competitors of copilot. 
-                The different competitors of Copilot are "Claude AI", "Gemini AI", "Google Bard", "OpenAI GPT", "Perplexity AI", "Vertex AI"
+                The different competitors of Copilot are "Claude AI", "Gemini AI", "Google Bard", "OpenAI GPT", "Perplexity AI", "Vertex AI".
+                Competitors of various versions of Copilot are : 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
+
                     1. Your Job is to convert the user question to SQL Query (Follow Microsoft SQL server SSMS syntax.). You have to give the query so that it can be used on Microsoft SQL server SSMS.You have to only return query as a result.
                     2. There is only one table with table name Copilot_Sentiment_Data where each row is a user review. The table has 10 columns, they are: "Claude AI", "Gemini AI", "Google Bard", "OpenAI GPT", "Perplexity AI", "Vertex AI"
                         Review: Review of the Copilot Product and Competitors of Copilot
                         Data_Source: From where is the review taken. It contains different retailers - It contains following values : [chinatechnews, DigitalTrends, Engadget, clubic, g2.com, gartner, JP-ASCII, Jp-Impresswatch, Itmedia, LaptopMag, NotebookCheck, PCMag, TechAdvisor, TechRadar, TomsHardware, TechCrunch, Verge, ZDNET, PlayStore, App Store, AppStore, Reddit, YouTube, Facebook, Instagram, X, VK, Forums, News, Print, Blogs/Websites, Reviews, Wordpress, Podcast, TV, Quora, LinkedIn, Videos]
                         Geography: From which Country or Region the review was given. It contains different Geography.
                                    list of Geographies in the table - Values in this column 
-                                   [ 'China', 'Unknown', 'France', 'Japan', 'US', 'Australia', 'Brazil',
-       'Canada', 'Germany', 'India', 'Mexico', 'UK' ]
+                                   [ 'China', 'Unknown', 'France', 'Japan', 'US', 'Australia', 'Brazil', 'Canada', 'Germany', 'India', 'Mexico', 'UK' ]
                         Title: What is the title of the review
                         Review_Date: The date on which the review was posted
                         Product: Corresponding product for the review. It contains following values: "COPILOT" and "Claude AI", "Gemini AI", "Google Bard", "OpenAI GPT", "Perplexity AI", "Vertex AI". 
                         
          IMPORTANT: "Claude AI", "Gemini AI", "Google Bard", "OpenAI GPT", "Perplexity AI", "Vertex AI" all are competitors of Copilot
          
-                        Product_Family: Which version or type of the corresponding Product was the review posted for. Different Product Names  - It contains following Values - [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile, Claude AI, Gemini AI, Google Bard, OpenAI GPT, Perplexity AI, Vertex AI ]
+                        Product_Family: Which version or type of the corresponding Product was the review posted for. Different Product Names  - It contains following Values - 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Edge Copilot', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile']
                         Sentiment: What is the sentiment of the review. It contains following values: 'positive', 'neutral', 'negative'.
                         Aspect: The review is talking about which aspect or feature of the product. It contains following values: 'Interface', 'Connectivity', 'Privacy','Compatibility', 'Generic', 'Innovation', 'Reliability','Productivity', 'Price', 'Text Summarization/Generation','Code Generation', 'Ease of Use', 'Performance','Personalization/Customization','Accessibility'.
                         Keywords: What are the keywords mentioned in the product
@@ -1618,13 +1616,13 @@ def get_conversational_chain_generic():
         Data Utilization:
         IMPORTANT: 1. Use only the provided dataset for generating responses.
         IMPORTANT: 2. Do not use or rely on pre-trained information other than Given Copilot Product Data and its Competitor Data like 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI' which is given in Dataset. Limit Yourself to data you are provided with.
-        IMPORTANT :3. Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'. If user asks about competitor you should able to give response for competitors mentioned before.
-        
+        IMPORTANT: 3. Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'. If user asks about competitor you should able to give response for competitors mentioned before.
+        IMPORTANT: 4. Competitors of various versions of Copilot are : 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
         Dataset Columns:
         Review: This column contains the opinions and experiences of users regarding different product families across geographies, providing insights into customer satisfaction or complaints and areas for improvement.
         Data_Source: This column indicates the platform from which the user reviews were collected, such as Reddit, Play Store, App Store, Tech Websites, or YouTube videos.
         Geography: This column lists the countries of the users who provided the reviews, allowing for an analysis of regional preferences and perceptions of the products.
-        Product_Family: This column identifies the broader category of products to which the review pertains, enabling comparisons and trend analysis across different product families like 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'.       
+        Product_Family: This column identifies the broader category of products to which the review pertains, enabling comparisons and trend analysis across different product families like 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Edge Copilot', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
         Sentiment: This column reflects the overall tone of the review, whether positive, negative, or neutral, and is crucial for gauging customer sentiment.
         Aspect: This column highlights the particular features or attributes of the product that the review discusses, pinpointing areas of strength or concern.
         
@@ -1872,7 +1870,7 @@ def classify(user_question):
         
             Given an input, classify it into one of two categories:
             
-            ProductFamilies = Microsoft Copilot, Copilot in Windows 11, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile
+            ProductFamilies = 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Edge Copilot', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'. 
             
             1stFlow: [Summarization of any Product Family or Product Family Name]. This flow is just for summarization of reviews of only one product/product Family name.
                     Choose 1st flow, if the user seeks for summarization of only one product choose this flow.
@@ -1943,10 +1941,11 @@ Instructions:
                 Title: What is the title of the review
                 Review_Date: The date on which the review was posted
                 Product: Corresponding product for the review. It contains following values: ['COPILOT','OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI']
-                Product_Family: Which version or type of the corresponding Product was the review posted for. Different Device Names  - It contains following Values - ['Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI']
+                Product_Family: Which version or type of the corresponding Product was the review posted for. Different Device Names  - It contains following Values - ['Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Edge Copilot', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile']
                 
                 IMPORTANT : REMEMBER THAT ALL THE NAMES IN PRODUCT_FAMILIES ARE NOT DIFFERENT VERSION OF COPILOT, THERE ARE SOME COMPETITORS AS WELL.
-                IMPORTANT : Different Product families/versions of copilot is 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
+                IMPORTANT : Different Product families/versions of copilot is 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile'.
+                IMPORTANT : Competitors of various versions of Copilot are : 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
                 IMPORTANT : Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
             
             
@@ -2077,9 +2076,7 @@ def get_conversational_chain_detailed_compare():
         
             IMPORTANT: Use only the data provided to you and do not rely on pre-trained documents.
             
-        Product = Microsoft Copilot, Copilot in Windows 11, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile (These are Microsoft Copilot Product) and their competitor includes : Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
-
-        
+        Product = Microsoft Copilot, Copilot in Windows 11, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile (These are Microsoft Copilot Product) and their competitor includes : Competitors of Copilot is 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.      
         1. Your Job is to Summarize the user reviews and sentiment data you get as an input for 2 or more Product that user mentioned.
         
         IMPORTANT : Do not just give summary of numbers, Give Pros and cons from reviews for wach aspect
@@ -2216,13 +2213,14 @@ Below are the available column names and values from the Copilot sentiment data:
                     It contains following values: 'COPILOT', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
                 Product_Family is one level deeper than Product. It will have different versions of Copilot and its competitors
                     Product_Family: Which version or type of the corresponding Product was the review posted for. 
-                    Different product family Names  - It contains following Values - [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile,'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI']
-                
-                IMPORTANT : Out of these Product Family Names, it can be segregated into 2 things : One is Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile] and the other ones are Competitors of copilot like ['OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI']
+                    Different product family Names  - It contains following Values - 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Edge Copilot', 'Github Copilot', 'Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.            
+                IMPORTANT : Out of these Product Family Names, it can be segregated into 2 things : One is Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile] and the other ones are Competitors of copilot like ['OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile']
                 
                 So, whenever user asks for compare different versions of copilot, the user meant compare Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile]
                 
                 and whenever user asks for compare copilot and its competitors, the user meant compare 'Copilot','OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI' - Note : This is from Product column and not from Product_Family
+                
+                and whenever user asks for compare different versions of copilot, the user meant compare  'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'. - Note : These are from Product_Family Column not from Product 
                 
                 Sentiment: What is the sentiment of the review. It contains following values: 'positive', 'neutral', 'negative'.
                 Aspect: The review is talking about which aspect or feature of the product. It contains following values: 'Interface', 'Connectivity', 'Privacy','Compatibility', 'Generic', 'Innovation', 'Reliability','Productivity', 'Price', 'Text Summarization/Generation','Code Generation', 'Ease of Use', 'Performance','Personalization/Customization','Accessibility','End User Usecase'.
@@ -2282,7 +2280,12 @@ Below are the available column names and values from the Copilot sentiment data:
         MSOffice -> Copilot for Microsoft 365
         Microsoft Office -> Copilot for Microsoft 365
         Office Product -> Copilot for Microsoft 365
-        Mobile -> Copilot for Mobile
+        Copilot Mobile -> Copilot for Mobile
+        ChatGPT Mobile -> ChatGPT For Mobile
+        Perplexity Mobile -> Perplexity AI For Mobile
+        Claude Mobile -> Claude AI For Mobile
+        Google Mobile -> Gemini AI For Mobile
+        Gemini Mobile -> Gemini AI For Mobile
         App -> Copilot for Mobile
         ios -> Copilot for Mobile
         apk -> Copilot for Mobile
@@ -2303,7 +2306,7 @@ Below are the available column names and values from the Copilot sentiment data:
         Google Vertex -> Vertex AI
         Perplexity AI -> Perplexity AIcom
         Perplexity -> Perplexity AI
-        AI -> Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile,'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
+        AI -> Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile, 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'
  
 IMPORTANT: If the input sentence mentions a device(Laptop or Desktop) instead of Copilot, keep the device name as it is.
  
@@ -2613,7 +2616,7 @@ Input:
 You are an AI Assistant for an AI tool designed to provide insightful follow-up questions based on the user's initial query. Follow the instructions below strictly:
 
 The AI tool has reviews data scraped from the web for different versions of Copilot:"Windows Copilot","Microsoft Copilot","GitHub Copilot","Copilot Pro","Copilot for Security","Copilot for Mobile","Copilot for Microsoft 365".
-The AI tool also has reviews data for competitors of different versions of Copilot: 'OpenAI GPT','Gemini AI','Claude AI','Google Bard','Vertex AI','Perplexity AI'.
+The AI tool also has reviews data for competitors of different versions of Copilot: 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
 The reviews are analyzed to extract aspects and sentiments related to the following aspects: 'Interface',,'Connectivity','Personalization/Customization','Privacy','Compatibility','Generic','Innovation','Reliability','Productivity','Price','Text Summarization/Generation','Code Generation','Ease of Use','Performance'.
 Based on the user's previous response, which involved summarization, comparison, visualization, or generic queries about these reviews, suggest three follow-up prompts that the user can ask next to complete their story. Ensure the prompts cover a range of potential queries, including detailed summaries, aspect-wise comparisons, and more generic inquiries to provide a comprehensive understanding.
 
