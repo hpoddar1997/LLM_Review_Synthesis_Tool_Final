@@ -2769,6 +2769,10 @@ if __name__ == "__main__":
                     st.session_state.curr_response = ""
                     st.session_state.user_question = None
                     st.session_state.devices_flag = True
+                    st.session_state.selected_sugg = None
+                    st.session_state.prompt_sugg = None
+                    st.session_state.selected_questions = ""
+                    st.session_state.copilot_curr_ques = None
                 if "chat_initiated" not in st.session_state:
                     st.session_state['chat_initiated'] = False
                 for message in st.session_state.display_history_devices:
@@ -2787,6 +2791,7 @@ if __name__ == "__main__":
                     if st.session_state.devices_approach != "Aspect-based":
                         st.session_state.curr_response = ""
                         st.session_state.user_question = None
+                        st.session_state.context_history_devices = []
                         st.session_state.devices_approach = "Aspect-based"
                     
                     if st.session_state.user_question:
@@ -2956,8 +2961,9 @@ if __name__ == "__main__":
                         
                 elif selected_options == "Summary-based":
                     if st.session_state.devices_approach != "Summary-based":
-                        st.session_state.curr_response = ""
                         st.session_state.user_question = None
+                        st.session_state.context_history_devices = []
+                        st.session_state.curr_response = ""
                         st.session_state.devices_approach = "Summary-based"
                     if st.session_state.user_question:   
                     #if user_question := st.chat_input("Enter the Prompt: "):
