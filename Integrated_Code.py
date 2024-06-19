@@ -549,7 +549,8 @@ def get_conversational_chain_quant_classify2_compare():
                     IMPORTANT : REMEMBER THAT ALL THE NAMES IN PRODUCT_FAMILIES ARE NOT DIFFERENT VERSION OF COPILOT, THERE ARE SOME COMPETITORS AS WELL.
                     IMPORTANT : Different Product families/versions of copilot is 'Windows Copilot', 'Microsoft Copilot', 'Copilot for Security', 'Copilot Pro', 'Copilot for Microsoft 365', 'Github Copilot', 'Copilot for Mobile'
                     IMPORTANT : Competitors of Copilot are 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI'
-                    IMPORTANT : Competitors of various versions of Copilot are : 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
+                    IMPORTANT : whenever user ask like Compare the net sentiment for github Copilot and its competitors the it should take the below competitors as Product_Family.
+                                Competitors of versions of Copilot are : 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.
                     
                     IMPORTANT : User can confuse a lot, but understand the question carefully and respond:
             Example : I am a story writer , Can you tell me which AI is good for writing stories based on user reviews? -> In this case, user confuses by telling that he is a story teller and all but he just needs to know "What is the best AI for Text Generation" -> Which is again decided based on comparison.
@@ -559,7 +560,7 @@ def get_conversational_chain_quant_classify2_compare():
                     You should be carefull while rephrasing it.
                    
                     
-                IMPORTANT : Out of these Product Family Names, it can be segregated into 2 things : One is Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile] and the other ones are Competitors of copilot like ['Copilot for Mobile', 'OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.]
+                IMPORTANT : Out of these Product Family Names, it can be segregated into 2 things : One is Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile] and the other ones are Competitors of copilot like ['OpenAI GPT', 'Gemini AI', 'Claude AI', 'Google Bard', 'Vertex AI', 'Perplexity AI', 'Gemini AI For Mobile', 'ChatGPT For Mobile', 'Perplexity AI For Mobile', 'Claude AI For Mobile'.]
                 
                 So, whenever user asks for compare different versions of copilot, the user meant compare Different versions of Copilot like [Microsoft Copilot, Windows CoPilot, Copilot, Github Copilot , Copilot for Security, Copilot Pro, Copilot for Microsoft 365, Copilot for Mobile]
                 
@@ -755,7 +756,7 @@ def get_conversational_chain_quant_classify2_compare():
                                                     FROM
                                                         Copilot_Sentiment_Data
                                                     WHERE
-                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT','OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI')
+                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT','OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI', 'GEMINI AI FOR MOBILE','CHATGPT FOR MOBILE', 'PERPLEXITY AI FOR MOBILE', 'CLAUDE AI FOR MOBILE')
                                                     GROUP BY
                                                         PRODUCT_FAMILY, ASPECT
                                                 ),
@@ -799,7 +800,7 @@ def get_conversational_chain_quant_classify2_compare():
                                                     FROM
                                                         Copilot_Sentiment_Data
                                                     WHERE
-                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT', 'OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI')
+                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT', 'OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI', 'GEMINI AI FOR MOBILE','CHATGPT FOR MOBILE', 'PERPLEXITY AI FOR MOBILE', 'CLAUDE AI FOR MOBILE')
                                                     GROUP BY
                                                         PRODUCT_FAMILY) ONS
                                                 ON
@@ -820,7 +821,7 @@ def get_conversational_chain_quant_classify2_compare():
                                                     FROM
                                                         Copilot_Sentiment_Data
                                                     WHERE
-                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT', 'OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI')
+                                                        PRODUCT_FAMILY IN ('GITHUB COPILOT', 'OPENAI GPT', 'GEMINI AI', 'CLAUDE AI', 'GOOGLE BARD', 'VERTEX AI', 'PERPLEXITY AI', 'GEMINI AI FOR MOBILE','CHATGPT FOR MOBILE', 'PERPLEXITY AI FOR MOBILE', 'CLAUDE AI FOR MOBILE')
                                                     GROUP BY
                                                         PRODUCT_FAMILY) ONS
                                                 JOIN
