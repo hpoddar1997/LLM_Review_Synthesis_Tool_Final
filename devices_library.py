@@ -247,7 +247,7 @@ def generate_SQL_Query(user_question):
         # Update context with the latest interaction
         interaction += "\nQuestion:\n" + user_question + "\nAnswer:\n" + sql_query
     except:
-        print(f"An error occured while generating SQL Query for User Question: {user_question}")
+        print(f"An error occured in generate_SQL_Query for User Question: {user_question}")
         sql_query = None
     
     return sql_query
@@ -298,8 +298,8 @@ def process_tablename_devices(sql, table_name):
             query = re.sub(pattern, add_percentage_signs, query)
         
         return query
-    except Exception as e:
-        err = f"An error occurred while processing table name in SQL query: {e}"
+    except:
+        err = f"An error occurred while processing table name in SQL query."
         return err
         
 
@@ -519,7 +519,7 @@ def get_net_sentiment(device_name):
     except:
         Net_Sentiment = None
         aspect_sentiment = None   
-        print(f"Error in getting net sentiment for {device_name}")
+        print(f"Error in getting net sentiment and aspect sentiment for {device_name}")
     return Net_Sentiment, aspect_sentiment
 
 def get_comp_device_details(user_input, df1):
@@ -530,6 +530,7 @@ def get_comp_device_details(user_input, df1):
         sentiment_device_name = get_sentiment_device_name(user_input)
     except:
         sentiment_device_name = None
+        print(f"Error in getting competitor sentiment device name for {user_input}")
     try:
         # Assuming the images are in a folder named 'Device Images'
         img_folder = 'Device Images'
@@ -559,45 +560,49 @@ def get_comp_device_details(user_input, df1):
     
     
 def get_final_df_devices(aspects_list,device):
-    final_df = pd.DataFrame()
-    device = device
-    aspects_list = aspects_list
-    # Iterate over each aspect and execute the query
-    for aspect in aspects_list:
-        # Construct the SQL query for the current aspect
-        query = f"""
-        SELECT Keywords,
-               COUNT(CASE WHEN Sentiment = 'Positive' THEN 1 END) AS Positive_Count,
-               COUNT(CASE WHEN Sentiment = 'Negative' THEN 1 END) AS Negative_Count,
-               COUNT(CASE WHEN Sentiment = 'Neutral' THEN 1 END) AS Neutral_Count,
-               COUNT(*) as Total_Count
-        FROM Devices_Sentiment_Data
-        WHERE Aspect = '{aspect}' AND Product_Family LIKE '%{device}%'
-        GROUP BY Keywords
-        ORDER BY Total_Count DESC;
-        """
+    try:
+        final_df = pd.DataFrame()
+        device = device
+        aspects_list = aspects_list
+        # Iterate over each aspect and execute the query
+        for aspect in aspects_list:
+            # Construct the SQL query for the current aspect
+            query = f"""
+            SELECT Keywords,
+                   COUNT(CASE WHEN Sentiment = 'Positive' THEN 1 END) AS Positive_Count,
+                   COUNT(CASE WHEN Sentiment = 'Negative' THEN 1 END) AS Negative_Count,
+                   COUNT(CASE WHEN Sentiment = 'Neutral' THEN 1 END) AS Neutral_Count,
+                   COUNT(*) as Total_Count
+            FROM Devices_Sentiment_Data
+            WHERE Aspect = '{aspect}' AND Product_Family LIKE '%{device}%'
+            GROUP BY Keywords
+            ORDER BY Total_Count DESC;
+            """
 
-        # Execute the query and get the result in 'key_df'
-        key_df = ps.sqldf(query, globals())
+            # Execute the query and get the result in 'key_df'
+            key_df = ps.sqldf(query, globals())
 
-        # Calculate percentages and keyword contribution
-        total_aspect_count = key_df['Total_Count'].sum()
-        key_df['Positive_Percentage'] = (key_df['Positive_Count'] / total_aspect_count) * 100
-        key_df['Negative_Percentage'] = (key_df['Negative_Count'] / total_aspect_count) * 100
-        key_df['Neutral_Percentage'] = (key_df['Neutral_Count'] / total_aspect_count) * 100
-        key_df['Keyword_Contribution'] = (key_df['Total_Count'] / total_aspect_count) * 100
+            # Calculate percentages and keyword contribution
+            total_aspect_count = key_df['Total_Count'].sum()
+            key_df['Positive_Percentage'] = (key_df['Positive_Count'] / total_aspect_count) * 100
+            key_df['Negative_Percentage'] = (key_df['Negative_Count'] / total_aspect_count) * 100
+            key_df['Neutral_Percentage'] = (key_df['Neutral_Count'] / total_aspect_count) * 100
+            key_df['Keyword_Contribution'] = (key_df['Total_Count'] / total_aspect_count) * 100
 
-        # Drop the count columns
-        key_df = key_df.drop(['Positive_Count', 'Negative_Count', 'Neutral_Count', 'Total_Count'], axis=1)
+            # Drop the count columns
+            key_df = key_df.drop(['Positive_Count', 'Negative_Count', 'Neutral_Count', 'Total_Count'], axis=1)
 
-        # Add the current aspect to the DataFrame
-        key_df['Aspect'] = aspect
+            # Add the current aspect to the DataFrame
+            key_df['Aspect'] = aspect
 
-        # Sort by 'Keyword_Contribution' and select the top 2 for the current aspect
-        key_df = key_df.sort_values(by='Keyword_Contribution', ascending=False).head(2)
+            # Sort by 'Keyword_Contribution' and select the top 2 for the current aspect
+            key_df = key_df.sort_values(by='Keyword_Contribution', ascending=False).head(2)
 
-        # Append the results to the final DataFrame
-        final_df = pd.concat([final_df, key_df], ignore_index=True)
+            # Append the results to the final DataFrame
+            final_df = pd.concat([final_df, key_df], ignore_index=True)
+    except:
+        print(f"Error in get_final_df_devices for Aspect list: {str(aspects_list)} and device: {device}")
+        final_df = pd.DataFrame()
         
     return final_df
 
@@ -708,21 +713,28 @@ def get_conversational_chain_detailed_summary_devices():
         return chain
     except:
         err = f"An error occurred while getting conversation chain for detailed review summarization."
-        print(f"Error in getting conversation chain for detailed device details.")
+        print(f"Error in get_conversational_chain_detailed_summary_devices()")
         return err
 
 # Function to handle user queries using the existing vector store
 def query_detailed_summary_devices(user_question, vector_store_path="faiss_index_Windows_116k"):
     try:
+        print(f"\n\nUser Question: {user_question}\n\n")
+        print(f"\n\nVector Store Path: {vector_store_path}\n\n")
         embeddings = AzureOpenAIEmbeddings(azure_deployment=azure_embedding_name)
+        print(f"\n\nEmbeddings: {embeddings}\n\n")
         vector_store = FAISS.load_local(vector_store_path, embeddings, allow_dangerous_deserialization=True)
+        print(f"\n\Vector Store: {vector_store}\n\n")
         chain = get_conversational_chain_detailed_summary_devices()
+        print(f"\n\nChain: {chain}\n\n")
         docs = vector_store.similarity_search(user_question)
+        print(f"\n\nDocs: {docs}\n\n")
         response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+        print(f"""\n\nResponse: {response["output_text"]}\n\n""")
         return response["output_text"]
     except:
         err = f"An error occurred while getting LLM response for detailed review summarization."
-        print(f"Error in getting detailed summary for {user_question}")
+        print(f"Error in query_detailed_summary_devices() for {user_question}")
         return err
         
 def get_detailed_summary(device_name):
@@ -745,78 +757,85 @@ def get_detailed_summary(device_name):
             formatted_aspects = ', '.join(f"'{aspect}'" for aspect in aspects_list)
             key_df = get_final_df_devices(aspects_list, device_name)
             b =  key_df.to_dict(orient='records')
-            su = query_detailed_summary_devices("Summarize reviews of" + device_name + "for " +  formatted_aspects +  "Aspects which have following "+str(dataframe_as_dict)+ str(b) + "Reviews: ")
+            su = query_detailed_summary_devices("Summarize reviews of " + device_name + " for " +  formatted_aspects +  " Aspects which have following Sentiment Scores: "+str(dataframe_as_dict)+ str(b))
     except:
         su = "I don't have sufficient data to provide a complete and accurate response at this time. Please provide more details or context."
-        print(f"Error in getting detailed summary for {device_name}")
+        print(f"Error in get_detailed_summary() for {device_name}")
     return su
 
 def get_conversational_chain_summary():
-    
-    prompt_template = """
-    Your task is to analyze the reviews of Windows products and generate a summary of the pros and cons for each product based on the provided dataset.Provide an overall summary. focus only on listing the pros and cons. 
-    Use the format below for your response:
+    try:
+        prompt_template = """
+        Your task is to analyze the reviews of Windows products and generate a summary of the pros and cons for each product based on the provided dataset.Provide an overall summary. focus only on listing the pros and cons. 
+        Use the format below for your response:
 
-    Pros and Cons of [Product Name]:
+        Pros and Cons of [Product Name]:
 
-    Pros:
+        Pros:
 
-    [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
-    Cons:
+        [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of positive feedback regarding this aspect. Include specific examples if available.]
+        Cons:
 
-    [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
-    [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
-    
-    [Overall Summary]: [Brief summary of overall feedback regarding all aspect.]
-    The dataset includes the following columns:
+        [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
+        [Aspect]: [Brief summary of negative feedback regarding this aspect. Include specific examples if available.]
 
-    Review: Review of the Windows product.
-    Data_Source: Source of the review, containing different retailers.
-    Geography: Country or region of the review.
-    Title: Title of the review.
-    Review_Date: Date the review was posted.
-    Product: Product the review corresponds to, with values: "Windows 11 (Preinstall)", "Windows 10".
-    Product_Family: Version or type of the corresponding product.
-    Sentiment: Sentiment of the review, with values: 'Positive', 'Neutral', 'Negative'.
-    Aspect: Aspect or feature of the product discussed in the review, with values: "Audio-Microphone", "Software", "Performance", "Storage/Memory", "Keyboard", "Browser", "Connectivity", "Hardware", "Display", "Graphics", "Battery", "Gaming", "Design", "Ports", "Price", "Camera", "Customer-Service", "Touchpad", "Account", "Generic".
-    Keywords: Keywords mentioned in the review.
-    Review_Count: Will be 1 for each review or row.
-    Sentiment_Score: Will be 1, 0, or -1 based on the sentiment.
-    Please ensure that the response is based on the analysis of the provided dataset, summarizing both positive and negative aspects of each product.
-    Important: Generate outputs using the provided dataset only, don't use pre-trained information to generate outputs.\n
-     
-        
-    Context:\n {context}?\n
-    Question: \n{question}\n
- 
-    Answer:
-    """
-    model = AzureChatOpenAI(
-    azure_deployment=azure_deployment_name,
-    api_version='2023-12-01-preview',temperature = 0)
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
+        [Overall Summary]: [Brief summary of overall feedback regarding all aspect.]
+        The dataset includes the following columns:
+
+        Review: Review of the Windows product.
+        Data_Source: Source of the review, containing different retailers.
+        Geography: Country or region of the review.
+        Title: Title of the review.
+        Review_Date: Date the review was posted.
+        Product: Product the review corresponds to, with values: "Windows 11 (Preinstall)", "Windows 10".
+        Product_Family: Version or type of the corresponding product.
+        Sentiment: Sentiment of the review, with values: 'Positive', 'Neutral', 'Negative'.
+        Aspect: Aspect or feature of the product discussed in the review, with values: "Audio-Microphone", "Software", "Performance", "Storage/Memory", "Keyboard", "Browser", "Connectivity", "Hardware", "Display", "Graphics", "Battery", "Gaming", "Design", "Ports", "Price", "Camera", "Customer-Service", "Touchpad", "Account", "Generic".
+        Keywords: Keywords mentioned in the review.
+        Review_Count: Will be 1 for each review or row.
+        Sentiment_Score: Will be 1, 0, or -1 based on the sentiment.
+        Please ensure that the response is based on the analysis of the provided dataset, summarizing both positive and negative aspects of each product.
+        Important: Generate outputs using the provided dataset only, don't use pre-trained information to generate outputs.\n
+
+
+        Context:\n {context}?\n
+        Question: \n{question}\n
+
+        Answer:
+        """
+        model = AzureChatOpenAI(
+        azure_deployment=azure_deployment_name,
+        api_version='2023-12-01-preview',temperature = 0)
+        prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+        chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
+    except:
+        print(f"Error in get_conversational_chain_summary()")
     return chain
 
 def query_to_embedding_summarize(user_question, txt_file_path):
-    text = get_txt_text(txt_file_path)
-    chunks = get_text_chunks(text)
-    get_vector_store(chunks)
-    embeddings = AzureOpenAIEmbeddings(azure_deployment=azure_embedding_name)
-    
-    # Load the vector store with the embeddings model
-    new_db = FAISS.load_local("faiss-index", embeddings, allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
-    chain = get_conversational_chain_summary()
-    response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-    return response['output_text']
+    try:
+        text = get_txt_text(txt_file_path)
+        chunks = get_text_chunks(text)
+        get_vector_store(chunks)
+        embeddings = AzureOpenAIEmbeddings(azure_deployment=azure_embedding_name)
+
+        # Load the vector store with the embeddings model
+        new_db = FAISS.load_local("faiss-index", embeddings, allow_dangerous_deserialization=True)
+        docs = new_db.similarity_search(user_question)
+        chain = get_conversational_chain_summary()
+        response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+        output = response['output_text']
+    except:
+        print(f"Error in query_to_embedding_summarize() for user question: {user_question} and text file path: {txt_file_path}")
+        output = ""
+    return output
 
 #-----------------------------------------------------Quant and Visualization-------------------------------------------------------#
 
@@ -1074,8 +1093,9 @@ IMPORTANT : If a user is asking about which is best/poor, everything should be b
         prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
         return chain
-    except Exception as e:
-        err = f"An error occurred while getting conversation chain for quantifiable review summarization: {e}"
+    except:
+        err = f"An error occurred while getting conversation chain for quantifiable review summarization."
+        print(f"Error in get_conversational_chain_quant_classify2_devices()")
         return err
 
 def query_quant_classify2_devices(user_question, vector_store_path="faiss_index_Windows_116k"):
@@ -1156,10 +1176,9 @@ def query_quant_classify2_devices(user_question, vector_store_path="faiss_index_
         except:
             pass
         return data_1
-    except Exception as e:
-        st.write(e)
-        
-        err = f"An error occurred while generating response for Quantify: {e}"
+    except:
+        err = f"An error occurred while generating response for Quantify."
+        print(f"Error in query_quant_classify2_devices() for {user_question}")
         return err
     
     
@@ -1243,25 +1262,22 @@ def get_conversational_chain_detailed_summary2_devices():
         prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
         return chain
-    except Exception as e:
-        err = f"An error occurred while getting conversation chain for detailed review summarization: {e}"
+    except:
+        err = f"An error occurred while getting conversation chain for detailed review summarization."
+        print(f"Error in get_conversational_chain_detailed_summary2_devices().")
         return err
     
 def query_detailed_summary2_devices(dataframe_as_dict,user_question, history, vector_store_path="faiss_index_Windows_116k"):
     try:
-        #st.write("hi")
-#         st.write(user_question)
         embeddings = AzureOpenAIEmbeddings(azure_deployment="MV_Agusta")
         vector_store = FAISS.load_local(vector_store_path, embeddings, allow_dangerous_deserialization=True)
         chain = get_conversational_chain_detailed_summary2_devices()
         docs = vector_store.similarity_search(user_question)
         response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
         return response["output_text"]
-    except Exception as e:
-        #st.write(e)
-        #st.write("hi2")
+    except:
+        print(f"Error in query_detailed_summary2_devices()")
         err = generate_chart_insight_llm(dataframe_as_dict)
-        #st.write(e)
         return err    
     
 def generate_chart_insight_llm_devices(user_question):
@@ -1293,9 +1309,10 @@ def generate_chart_insight_llm_devices(user_question):
         #st.write("\n\n",response["output_text"])
         return response["output_text"]
             
-    except Exception as e:
+    except:
         #st.write("inside 2nd func")
         err = "Apologies, unable to generate insights based on the provided input data. Kindly refine your search query and try again!"
+        print(f"Error in generate_chart_insight_llm_devices() for {user_question}")
         return err
     
 
@@ -1305,8 +1322,9 @@ def quantifiable_data_devices(user_question):
         response = query_quant_classify2_devices(user_question)
         
         return response
-    except Exception as e:
-        err = f"An error occurred while generating quantitative review summarization: {e}"
+    except:
+        err = f"An error occurred while generating quantitative review summarization."
+        print(f"Error in quantifiable_data_devices for {user_question}")
         return err    
     
     
@@ -1464,8 +1482,9 @@ def get_conversational_chain_quant_classify2_sales():
             temperature = 0.1)
         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
         return chain
-    except Exception as e:
-        err = f"An error occurred while getting conversation chain for quantifiable review summarization: {e}"
+    except:
+        err = f"An error occurred while getting conversation chain for quantifiable review summarization."
+        print(f"Error in get_conversational_chain_quant_classify2_sales() ")
         return err
 
 
@@ -1491,8 +1510,9 @@ def query_quant_classify2_sales(user_question, vector_store_path="faiss_index_Wi
         html_table = data.to_html(index=False)
     #     return html_table
         return data_1
-    except Exception as e:
-        err = f"An error occurred while generating response for quantitative review summarization: {e}"
+    except:
+        err = f"An error occurred while generating response for quantitative review summarization."
+        print(f"Error in query_quant_classify2_sales() for {user_question}")
         return err    
     
 #------------------------------------------------------------------------------------------------------------------------------------#
@@ -1500,18 +1520,23 @@ def query_quant_classify2_sales(user_question, vector_store_path="faiss_index_Wi
 
 def generate_device_details(device_input):
     global interaction
-    print(f"Input for Generate Device Details: {device_input}")
-    device_name, img_link = get_device_image(device_input)
-    net_Sentiment,aspect_sentiment = get_net_sentiment(device_name)
-    sales_device_name = get_sales_device_name(device_name)
-    total_sales = get_sales_units(sales_device_name)
-    asp = get_ASP(sales_device_name)
-    high_specs, sale = get_highest_selling_specs(sales_device_name)
-    star_rating_html = get_star_rating_html(net_Sentiment)
-#     st.write(f"Sales Device Name: {sales_device_name}")
-    comp_devices = compete_device(sales_device_name)
-    interaction = ""
-    return device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices
+    try:
+        print(f"Input for Generate Device Details: {device_input}")
+        device_name, img_link = get_device_image(device_input)
+        net_Sentiment,aspect_sentiment = get_net_sentiment(device_name)
+        sales_device_name = get_sales_device_name(device_name)
+        total_sales = get_sales_units(sales_device_name)
+        asp = get_ASP(sales_device_name)
+        high_specs, sale = get_highest_selling_specs(sales_device_name)
+        star_rating_html = get_star_rating_html(net_Sentiment)
+    #     st.write(f"Sales Device Name: {sales_device_name}")
+        comp_devices = compete_device(sales_device_name)
+        interaction = ""
+        return device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices
+    except:
+        print(f"Error in generate_device_details() for {device_input}")
+        return device_input, None, None, None, None, None, "NA", None, "NA", None
+    
 
 def load_and_resize_image(url, new_height):
     try:
@@ -1540,202 +1565,219 @@ def get_vector_store(chunks):
     vector_store.save_local("faiss-index")
     
 def device_details(device):
-    device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices = generate_device_details(device)
-    aspects = ['Performance', 'Design', 'Display', 'Battery', 'Price', 'Software']
-    with st.container(border = True):
+    try:
+        device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices = generate_device_details(device)
+        aspects = ['Performance', 'Design', 'Display', 'Battery', 'Price', 'Software']
+        with st.container(border = True):
+            if device_name:
+                min_date, max_date = get_date_range(device_name)
+                with st.container(border = False,height = 200):
+                    col1, inter_col_space, col2 = st.columns((1, 4, 1))
+                    with inter_col_space:
+                        if img_link:
+                            image1 = load_and_resize_image(img_link, 150)
+                            st.image(image1)
+                        else:
+                            st.write("Image not available for this product.")
+                with st.container(height=170, border = False):
+                    st.header(device_name)
+                with st.container(height=50, border = False):
+                    st.markdown(star_rating_html, unsafe_allow_html=True)
+                with st.container(height=225, border = False):
+                    st.write(f"Total Devices Sold: {total_sales}")
+                    st.write(f"Average Selling Price: {asp}")
+                    st.write(f"Highest Selling Specs: {high_specs} - {sale}")
+                    st.markdown(f"<p style='font-size:12px;'>*sales data is from {min_date} to {max_date}</p>", unsafe_allow_html=True)
+                with st.container(height=300, border = False):
+                    st.subheader('Aspect Ratings')
+                    asp_rating = []
+                    for i in aspect_sentiment:
+                        asp_rating.append(get_star_rating_html(i))
+                    for aspect, stars in zip(aspects, asp_rating):
+                        st.markdown(f"{aspect}: {stars}",unsafe_allow_html=True)
+                data_1 = Devices_Sentiment_Data.loc[Devices_Sentiment_Data["Product_Family"] == device]["Review"]
+                a = device_name + "_Reviews.txt"
+                data_1.to_csv(a, sep='\t')
+                summary_1 = query_to_embedding_summarize("Give me the pros and cons of " + device_name, a)
+    #             summary_1 = "Placeholder Summary"
+                st.write(summary_1)
+                save_history_devices(summary_1)
+
         if device_name:
-            min_date, max_date = get_date_range(device_name)
-            with st.container(border = False,height = 200):
-                col1, inter_col_space, col2 = st.columns((1, 4, 1))
-                with inter_col_space:
-                    if img_link:
-                        image1 = load_and_resize_image(img_link, 150)
-                        st.image(image1)
-                    else:
-                        st.write("Image not available for this product.")
-            with st.container(height=170, border = False):
-                st.header(device_name)
-            with st.container(height=50, border = False):
-                st.markdown(star_rating_html, unsafe_allow_html=True)
-            with st.container(height=225, border = False):
-                st.write(f"Total Devices Sold: {total_sales}")
-                st.write(f"Average Selling Price: {asp}")
-                st.write(f"Highest Selling Specs: {high_specs} - {sale}")
-                st.markdown(f"<p style='font-size:12px;'>*sales data is from {min_date} to {max_date}</p>", unsafe_allow_html=True)
-            with st.container(height=300, border = False):
-                st.subheader('Aspect Ratings')
-                asp_rating = []
-                for i in aspect_sentiment:
-                    asp_rating.append(get_star_rating_html(i))
-                for aspect, stars in zip(aspects, asp_rating):
-                    st.markdown(f"{aspect}: {stars}",unsafe_allow_html=True)
-            data_1 = Devices_Sentiment_Data.loc[Devices_Sentiment_Data["Product_Family"] == device]["Review"]
-            a = device_name + "_Reviews.txt"
-            data_1.to_csv(a, sep='\t')
-            summary_1 = query_to_embedding_summarize("Give me the pros and cons of " + device_name, a)
-#             summary_1 = "Placeholder Summary"
-            st.write(summary_1)
-            save_history_devices(summary_1)
-            
-    if device_name:
-        st.session_state.curr_response+=f"Device Name: {device_name}<br><br>"
-        if summary_1:
-            st.session_state.curr_response+=f"{summary_1}<br><br>"
+            st.session_state.curr_response+=f"Device Name: {device_name}<br><br>"
+            if summary_1:
+                st.session_state.curr_response+=f"{summary_1}<br><br>"
+    except:
+        print(f"Error in device_details() for {device}")
+        st.write(f"Unable to generate response for the input query. Please rephrase and try again, or contact the developer of the tool.")
 
 def comparison_view(device1, device2):
-    st.write(r"$\textsf{\Large Device Comparison}$")
-    st.session_state.curr_response+=f"Device Comparison<br><br>"
-    col1, col2 = st.columns(2)
-    with col1:
-        device_details(device1)
-    with col2:
-        device_details(device2)
+    try:
+        st.write(r"$\textsf{\Large Device Comparison}$")
+        st.session_state.curr_response+=f"Device Comparison<br><br>"
+        col1, col2 = st.columns(2)
+        with col1:
+            device_details(device1)
+        with col2:
+            device_details(device2)
+    except:
+        print(f"Error in comparison_view() for {device1} and {device2}")
+        st.write(f"Unable to generate response for the input query. Please rephrase and try again, or contact the developer of the tool.")
         
         
 def identify_devices(input_string):
-    # First, check if any device in the Sales Data and Sentiment data is exactly in the input string
-    input_string = input_string.upper()
-    devices_list_sentiment = list(Devices_Sentiment_Data['Product_Family'].unique())
-    for device in devices_list_sentiment:
-        if device in input_string:
-            return device
-    
-    # If no exact match is found, use fuzzy matching
-    most_matching_device_sentiment = process.extractOne(input_string, devices_list_sentiment, scorer=fuzz.token_set_ratio)  
-    
-    # Check the matching score
-    if most_matching_device_sentiment[1] >= 60:
-        return most_matching_device_sentiment[0]
-    
-    devices_list_sales = list(dev_mapping['SalesDevice'].unique())
-    for device in devices_list_sales:
-        if device == "UNDEFINED":
-            continue
-        elif device in input_string:
-            return device
-    
-    most_matching_device_sales = process.extractOne(input_string, devices_list_sales, scorer=fuzz.token_set_ratio)
-    
-    if most_matching_device_sales[1] >= 60:
-        return most_matching_device_sales[0]
-    else:
+    try:
+        # First, check if any device in the Sales Data and Sentiment data is exactly in the input string
+        input_string = input_string.upper()
+        devices_list_sentiment = list(Devices_Sentiment_Data['Product_Family'].unique())
+        for device in devices_list_sentiment:
+            if device in input_string:
+                return device
+
+        # If no exact match is found, use fuzzy matching
+        most_matching_device_sentiment = process.extractOne(input_string, devices_list_sentiment, scorer=fuzz.token_set_ratio)  
+
+        # Check the matching score
+        if most_matching_device_sentiment[1] >= 60:
+            return most_matching_device_sentiment[0]
+
+        devices_list_sales = list(dev_mapping['SalesDevice'].unique())
+        for device in devices_list_sales:
+            if device == "UNDEFINED":
+                continue
+            elif device in input_string:
+                return device
+
+        most_matching_device_sales = process.extractOne(input_string, devices_list_sales, scorer=fuzz.token_set_ratio)
+
+        if most_matching_device_sales[1] >= 60:
+            return most_matching_device_sales[0]
+        else:
+            return "Device not available"
+    except:
+        print(f"Error in identify_devices() for {input_string}")
         return "Device not available"
+
         
 def device_summarization(user_input):
-    print(f"Device Summarization Input: {user_input}")
-    if user_input == "Device not availabe":
-        message = "I don't have sufficient data to provide a complete and accurate response at this time. Please provide more details or context."
-        st.write(message)
-        st.session_state.curr_response+=f"{message}<br>"
-    else:
-        inp = user_input
-        new_inp_check = False
-        if not hasattr(st.session_state, 'selected_devices'):
-            st.session_state.selected_devices = [None,None]
-        if not hasattr(st.session_state, 'past_inp'):
-            st.session_state.past_inp = None
-        if not hasattr(st.session_state, 'past_inp_comp_dev'):
-            st.session_state.past_inp_comp_dev = []
-        if not hasattr(st.session_state, 'display_history_devices'):
-            st.session_state.display_history_devices = []
-        if not hasattr(st.session_state, 'context_history_devices'):
-            st.session_state.context_history_devices = []
-        if not hasattr(st.session_state, 'curr_response'):
-            st.session_state.curr_response = ""
-        if (not st.session_state.past_inp) or (st.session_state.past_inp[0] != inp):
-            new_inp_check = True
-            st.session_state.past_inp_comp_dev = []
-            device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices = generate_device_details(inp)
+    try:
+        print(f"Device Summarization Input: {user_input}")
+        if user_input == "Device not availabe":
+            message = "I don't have sufficient data to provide a complete and accurate response at this time. Please provide more details or context."
+            st.write(message)
+            st.session_state.curr_response+=f"{message}<br>"
         else:
+            inp = user_input
             new_inp_check = False
-            old_inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ = st.session_state.past_inp
-        min_date, max_date = get_date_range(device_name)
-        
-        #Debug image link error:
-        #st.write(f"Image link for {device_name}: {img_link}")
-        
-        html_code = f"""
-        <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center;">
-            <div style="flex: 1; text-align: center;">
-                <img src="data:image/jpeg;base64,{base64.b64encode(open(img_link, "rb").read()).decode()}"  style="width: 150px; display: block; margin: 0 auto;">
-                <p style="color: black; font-size: 18px;">{device_name}</p>
-                <p>{star_rating_html}</p>
+            if not hasattr(st.session_state, 'selected_devices'):
+                st.session_state.selected_devices = [None,None]
+            if not hasattr(st.session_state, 'past_inp'):
+                st.session_state.past_inp = None
+            if not hasattr(st.session_state, 'past_inp_comp_dev'):
+                st.session_state.past_inp_comp_dev = []
+            if not hasattr(st.session_state, 'display_history_devices'):
+                st.session_state.display_history_devices = []
+            if not hasattr(st.session_state, 'context_history_devices'):
+                st.session_state.context_history_devices = []
+            if not hasattr(st.session_state, 'curr_response'):
+                st.session_state.curr_response = ""
+            if (not st.session_state.past_inp) or (st.session_state.past_inp[0] != inp):
+                new_inp_check = True
+                st.session_state.past_inp_comp_dev = []
+                device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices = generate_device_details(inp)
+            else:
+                new_inp_check = False
+                old_inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ = st.session_state.past_inp
+            min_date, max_date = get_date_range(device_name)
+
+            #Debug image link error:
+            #st.write(f"Image link for {device_name}: {img_link}")
+
+            html_code = f"""
+            <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center;">
+                <div style="flex: 1; text-align: center;">
+                    <img src="data:image/jpeg;base64,{base64.b64encode(open(img_link, "rb").read()).decode()}"  style="width: 150px; display: block; margin: 0 auto;">
+                    <p style="color: black; font-size: 18px;">{device_name}</p>
+                    <p>{star_rating_html}</p>
+                </div>
+                <div style="width: 2px; height: 150px; border-left: 2px dotted #ccc; margin: 0 20px;"></div>
+                <div style="flex: 2; color: black; font-size: 18px;">
+                    <p>Total Devices Sold: <strong>{total_sales}</strong></p>
+                    <p>Average Selling Price: <strong>{asp}</strong></p>
+                    <p>Highest Selling Specs: <strong>{high_specs}</strong> - <strong>{sale}</strong></p><br>
+                    <p style='font-size:12px;'>*sales data is from {min_date} to {max_date}</p>
+                </div>
             </div>
-            <div style="width: 2px; height: 150px; border-left: 2px dotted #ccc; margin: 0 20px;"></div>
-            <div style="flex: 2; color: black; font-size: 18px;">
-                <p>Total Devices Sold: <strong>{total_sales}</strong></p>
-                <p>Average Selling Price: <strong>{asp}</strong></p>
-                <p>Highest Selling Specs: <strong>{high_specs}</strong> - <strong>{sale}</strong></p><br>
-                <p style='font-size:12px;'>*sales data is from {min_date} to {max_date}</p>
-            </div>
-        </div>
-        """
-        st.markdown(html_code, unsafe_allow_html=True)
-        
-        
-        
-        if new_inp_check:
-            st.session_state.curr_response+=f"{html_code}<br>"
-            summ = get_detailed_summary(inp)
-            st.session_state.past_inp = (inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ)
-            st.session_state.curr_response+=f"Detailed Summary"
-            st.session_state.curr_response+=f"<br>{summ}<br>"
-            
-        st.write("")
-        st.write(r"$\textsf{\Large Detailed Summary}$")
-        st.write(summ)
-        save_history_devices(summ)
-        st.session_state.selected_devices[0] = device_name
-        
-        
-        if len(comp_devices):
-            st.write(r"$\textsf{\Large Compare with Similar Devices:}$")
-            col_list = [None, None, None]
-            checkbox_state = []
-            comp_devices_list = comp_devices['SERIES'].tolist()
-            for i in range(len(comp_devices_list)):
-                if i<3:
-                    checkbox_state.append(False)
-            col_list[0], col_list[1], col_list[2] = st.columns(3)
-            com_sent_dev_list = [None,None,None]
-            for i in range(len(comp_devices_list)):
-                if i < 3:
-                    with col_list[i]:
-                        if new_inp_check:
-                            com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name = get_comp_device_details(comp_devices_list[i], comp_devices)
-                            com_star_rating_html = get_star_rating_html(net_sentiment)
-                            st.session_state.past_inp_comp_dev.append((com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name,com_star_rating_html))
-                        else:
-                            com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name, com_star_rating_html = st.session_state.past_inp_comp_dev[i]
-                            
-                        com_sent_dev_list[i] = com_sent_dev_name
-                        with st.container(border = True, height = 360):
-                            with st.container(border = False, height = 290):
-                                min_date_comp, max_date_comp = get_date_range(com_device_name)
-                                html_content = f"""
-                                <div style="text-align: center; display: inline-block; ">
-                                    <img src="data:image/jpeg;base64,{base64.b64encode(open(img_path, "rb").read()).decode()}" width = "80" style="margin-bottom: 10px;">
-                                    <div style="font-size: 16px; color: #333;">{com_sent_dev_name}</div>
-                                    <div style="font-size: 14px; color: #666;">Sales: {com_sales}</div>
-                                    <div style="font-size: 14px; color: #666;">Average Selling Price: {ASP}</div>
-                                    <p>{com_star_rating_html}</p>
-                                    <p style='font-size:10px;'>*sales data is from {min_date_comp} to {max_date_comp}</p>
-                                </div>
-                            """
-                                st.markdown(html_content, unsafe_allow_html=True)
-                            
-                            checkbox_state[i] = st.checkbox("Compare",key=f"comparison_checkbox_{i}")
-    
-        for i in range(len(checkbox_state)):
-            if checkbox_state[i]:
-                st.session_state.selected_devices[1] = com_sent_dev_list[i]
-                print(f"Comparison between {device_name} and {com_sent_dev_list[i]}")
-                break
-            st.session_state.selected_devices[1] = None
-        
-        if st.session_state.selected_devices[1]:
-            comparison_view(st.session_state.selected_devices[0],st.session_state.selected_devices[1])
-            st.session_state.selected_devices = [None, None]
+            """
+            st.markdown(html_code, unsafe_allow_html=True)
+
+
+
+            if new_inp_check:
+                st.session_state.curr_response+=f"{html_code}<br>"
+                summ = get_detailed_summary(inp)
+                st.session_state.past_inp = (inp, device_name, img_link, net_Sentiment, aspect_sentiment, total_sales, asp, high_specs, sale, star_rating_html, comp_devices, summ)
+                st.session_state.curr_response+=f"Detailed Summary"
+                st.session_state.curr_response+=f"<br>{summ}<br>"
+
+            st.write("")
+            st.write(r"$\textsf{\Large Detailed Summary}$")
+            st.write(summ)
+            save_history_devices(summ)
+            st.session_state.selected_devices[0] = device_name
+
+
+            if len(comp_devices):
+                st.write(r"$\textsf{\Large Compare with Similar Devices:}$")
+                col_list = [None, None, None]
+                checkbox_state = []
+                comp_devices_list = comp_devices['SERIES'].tolist()
+                for i in range(len(comp_devices_list)):
+                    if i<3:
+                        checkbox_state.append(False)
+                col_list[0], col_list[1], col_list[2] = st.columns(3)
+                com_sent_dev_list = [None,None,None]
+                for i in range(len(comp_devices_list)):
+                    if i < 3:
+                        with col_list[i]:
+                            if new_inp_check:
+                                com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name = get_comp_device_details(comp_devices_list[i], comp_devices)
+                                com_star_rating_html = get_star_rating_html(net_sentiment)
+                                st.session_state.past_inp_comp_dev.append((com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name,com_star_rating_html))
+                            else:
+                                com_device_name, img_path, com_sales, ASP, net_sentiment,com_sent_dev_name, com_star_rating_html = st.session_state.past_inp_comp_dev[i]
+
+                            com_sent_dev_list[i] = com_sent_dev_name
+                            with st.container(border = True, height = 360):
+                                with st.container(border = False, height = 290):
+                                    min_date_comp, max_date_comp = get_date_range(com_device_name)
+                                    html_content = f"""
+                                    <div style="text-align: center; display: inline-block; ">
+                                        <img src="data:image/jpeg;base64,{base64.b64encode(open(img_path, "rb").read()).decode()}" width = "80" style="margin-bottom: 10px;">
+                                        <div style="font-size: 16px; color: #333;">{com_sent_dev_name}</div>
+                                        <div style="font-size: 14px; color: #666;">Sales: {com_sales}</div>
+                                        <div style="font-size: 14px; color: #666;">Average Selling Price: {ASP}</div>
+                                        <p>{com_star_rating_html}</p>
+                                        <p style='font-size:10px;'>*sales data is from {min_date_comp} to {max_date_comp}</p>
+                                    </div>
+                                """
+                                    st.markdown(html_content, unsafe_allow_html=True)
+
+                                checkbox_state[i] = st.checkbox("Compare",key=f"comparison_checkbox_{i}")
+
+            for i in range(len(checkbox_state)):
+                if checkbox_state[i]:
+                    st.session_state.selected_devices[1] = com_sent_dev_list[i]
+                    print(f"Comparison between {device_name} and {com_sent_dev_list[i]}")
+                    break
+                st.session_state.selected_devices[1] = None
+
+            if st.session_state.selected_devices[1]:
+                comparison_view(st.session_state.selected_devices[0],st.session_state.selected_devices[1])
+                st.session_state.selected_devices = [None, None]
+    except:
+        print(f"Error in device_summarization() for {user_input}")
+        st.write(f"Unable to generate response for the input query. Please rephrase and try again, or contact the developer of the tool.")
 
 def extract_comparison_devices(user_question):
     try:
@@ -1771,7 +1813,7 @@ def extract_comparison_devices(user_question):
         return response['output_text'].split(", ")
     
     except:
-        print(f"An error occurred while getting conversation chain for prompt category.")
+        print(f"Error in extract_comparison_devices() for {user_question}")
         return None
 
 def identify_prompt(user_question):
@@ -1877,7 +1919,7 @@ def identify_prompt(user_question):
         else:
             return "other"
     except:
-        print(f"An error occurred while identifying the prompt category for user question: {user_question}")
+        print(f"Error in identify_prompt() for {user_question}")
         return None
         
 def get_conversational_chain_devices_generic():
@@ -1932,6 +1974,7 @@ def get_conversational_chain_devices_generic():
         return chain
     except:
         err = f"An error occurred while getting conversation chain for detailed review summarization."
+        print(f"Error in get_conversational_chain_devices_generic()")
         return err
       
 def query_devices_detailed_generic(user_question, vector_store_path="faiss_index_Windows_116k"):
@@ -1944,6 +1987,7 @@ def query_devices_detailed_generic(user_question, vector_store_path="faiss_index
         return response["output_text"]
     except:
         err = f"An error occurred while getting LLM response for detailed review summarization."
+        print(f"Error in query_devices_detailed_generic() for {user_question}")
         return err
 
 def get_conversational_chain_quant_devices():
@@ -2087,6 +2131,7 @@ def get_conversational_chain_quant_devices():
         return chain
     except:
         err = f"An error occurred while getting conversation chain for quantifiable review summarization."
+        print(f"Error in get_conversational_chain_quant_devices().")
         return err
 
 #Function to convert user prompt to quantitative outputs for Copilot Review Summarization
@@ -2108,6 +2153,7 @@ def query_quant_devices(user_question, vector_store_path="faiss_index_Windows_11
         return data_1
     except:
         err = f"An error occurred while generating response for quantitative review summarization."
+        print(f"Error in query_quant_devices() for {user_question}")
         return err
 
 def get_conversational_chain_quant_classify2_compare_devices():
@@ -2302,8 +2348,9 @@ def get_conversational_chain_quant_classify2_compare_devices():
             temperature = 0.0)
         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
         return chain
-    except Exception as e:
-        err = f"An error occurred while getting conversation chain for quantifiable review summarization: {e}"
+    except:
+        err = f"An error occurred while getting conversation chain for quantifiable review summarization."
+        print(f"Error in get_conversational_chain_quant_classify2_compare_devices().")
         return err
 
 def query_quant_classify2_compare_devices(user_question, vector_store_path="combine_indexes"):
@@ -2325,8 +2372,9 @@ def query_quant_classify2_compare_devices(user_question, vector_store_path="comb
         html_table = data.to_html(index=False)
     #     return html_table
         return data_1
-    except Exception as e:
-        err = f"An error occurred while generating response for quantitative review summarization: {e}"
+    except:
+        err = f"An error occurred while generating response for quantitative review summarization."
+        print(f"Error in query_quant_classify2_compare_devices() for {user_question}.")
         return err
     
     
