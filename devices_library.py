@@ -719,18 +719,11 @@ def get_conversational_chain_detailed_summary_devices():
 # Function to handle user queries using the existing vector store
 def query_detailed_summary_devices(user_question, vector_store_path="faiss_index_Windows_116k"):
     try:
-        print(f"\n\nUser Question: {user_question}\n\n")
-        print(f"\n\nVector Store Path: {vector_store_path}\n\n")
         embeddings = AzureOpenAIEmbeddings(azure_deployment=azure_embedding_name)
-        print(f"\n\nEmbeddings: {embeddings}\n\n")
         vector_store = FAISS.load_local(vector_store_path, embeddings, allow_dangerous_deserialization=True)
-        print(f"\n\Vector Store: {vector_store}\n\n")
         chain = get_conversational_chain_detailed_summary_devices()
-        print(f"\n\nChain: {chain}\n\n")
         docs = vector_store.similarity_search(user_question)
-        print(f"\n\nDocs: {docs}\n\n")
         response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-        print(f"""\n\nResponse: {response["output_text"]}\n\n""")
         return response["output_text"]
     except:
         err = f"An error occurred while getting LLM response for detailed review summarization."
@@ -1521,7 +1514,6 @@ def query_quant_classify2_sales(user_question, vector_store_path="faiss_index_Wi
 def generate_device_details(device_input):
     global interaction
     try:
-        print(f"Input for Generate Device Details: {device_input}")
         device_name, img_link = get_device_image(device_input)
         net_Sentiment,aspect_sentiment = get_net_sentiment(device_name)
         sales_device_name = get_sales_device_name(device_name)
@@ -1661,7 +1653,6 @@ def identify_devices(input_string):
         
 def device_summarization(user_input):
     try:
-        print(f"Device Summarization Input: {user_input}")
         if user_input == "Device not availabe":
             message = "I don't have sufficient data to provide a complete and accurate response at this time. Please provide more details or context."
             st.write(message)
@@ -1768,7 +1759,6 @@ def device_summarization(user_input):
             for i in range(len(checkbox_state)):
                 if checkbox_state[i]:
                     st.session_state.selected_devices[1] = com_sent_dev_list[i]
-                    print(f"Comparison between {device_name} and {com_sent_dev_list[i]}")
                     break
                 st.session_state.selected_devices[1] = None
 
@@ -1905,7 +1895,6 @@ def identify_prompt(user_question):
         
         # Get the response from the model
         response = chain({"input_documents": [], "question": user_question}, return_only_outputs=True)
-        print(response)
 
          # Determine the output category based on the response
         if "summarization" in response["output_text"].lower():
@@ -2365,7 +2354,6 @@ def query_quant_classify2_compare_devices(user_question, vector_store_path="comb
         # st.write(SQL_Query)
         SQL_Query = convert_top_to_limit(SQL_Query)
         SQL_Query = process_tablename(SQL_Query,"Devices_Sentiment_Data")
-        print(SQL_Query)
         # st.write(SQL_Query)
         data = ps.sqldf(SQL_Query, globals())
         data_1 = data
@@ -2698,10 +2686,6 @@ def generate_chart(df):
     try:
         
         global full_response
-        # Determine the data types of the columns
-    #     if df.shape[0] == 1:
-    #         #print("hi")
-    #         return
         df_copy=df.copy()
         df = df[~df.applymap(lambda x: x == 'TOTAL').any(axis=1)]
         #st.write("shape of df",df)
