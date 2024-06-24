@@ -2655,13 +2655,17 @@ def sugg_checkbox(user_question):
     if not st.session_state.prompt_sugg:
         questions = prompt_suggestion(user_question)
         print(f"Prompt Suggestions: {questions}")
-        st.session_state.prompt_sugg = questions.split('\n')
-#     checkbox_states = [st.checkbox(question) for question in st.session_state.prompt_sugg]
+        questions = questions.split('\n')
+        questions_new = []
+        for i in questions:
+            if i[0].isdigit():
+                x = i[3:]
+                questions_new.append(x)
+        st.session_state.prompt_sugg = questions_new
     checkbox_states = []
     checkbox_states = [st.checkbox(st.session_state.prompt_sugg[i],key = f"Checkbox{i}") for i in range(len(st.session_state.prompt_sugg))]
     for i, state in enumerate(checkbox_states):
         if state:
-            st.write(f"You selected: {st.session_state.prompt_sugg[i]}")
             st.session_state.selected_sugg = st.session_state.prompt_sugg[i]
             st.experimental_rerun()
             break
