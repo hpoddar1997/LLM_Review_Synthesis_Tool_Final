@@ -68,17 +68,11 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
-############## DON'T FORGET TO DELETE THIS ###############
-
-
-
 client = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
     api_version="2024-02-01",
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     )
-
-############## DELETE UNTIL HERE ###############
 
 
 global model
@@ -2797,52 +2791,31 @@ if __name__ == "__main__":
                         st.session_state.user_question = None
                         st.session_state.context_history_devices = []
                         st.session_state.devices_approach = "Aspect-based"
+                        st.session_state.selected_sugg_devices = None
+                        st.session_state.prompt_sugg_devices = None
+                        
+                    if st.session_state.selected_sugg_devices:
+                        st.session_state.user_question = st.session_state.selected_sugg_devices
+                        st.chat_message("user").markdown(st.session_state.user_question)
+                        st.session_state.display_history_devices.append({"role": "user", "content": st.session_state.user_question, "is_html": False})
+                        st.session_state.selected_sugg_devices = None
+                        st.session_state.prompt_sugg_devices = None
                     
                     if st.session_state.user_question:
                         with st.chat_message("assistant"):
                             classification = identify_prompt(st.session_state.user_question)
                             print(f"\n\nPROMPT CLASSIFICATION FOR {st.session_state.user_question}: {classification}\n\n")
                             if classification == 'summarization':
-                                device = identify_devices(st.session_state.user_question.upper())
-                                if device == "Device not available":
-                                    Gen_Ans = query_devices_detailed_generic(st.session_state.user_question)
-                                    st.write(Gen_Ans)
-                                    save_history_devices(Gen_Ans)
-                                    st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
-                                else:
-                                    device1 = get_sentiment_device_name(device)
-                                    if device1:
-                                        device_summarization(device1)
-                                        st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
-                                        st.session_state.curr_response = ""
-                                    else:
-                                        Gen_Ans = query_devices_detailed_generic(st.session_state.user_question)
-                                        st.write(Gen_Ans)
-                                        save_history_devices(Gen_Ans)
-                                        st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
+                                device = device_summ(st.session_state.user_question.upper())
+                                st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
+                                st.session_state.curr_response = ""
 
                             elif classification == 'comparison':
                                 devices = extract_comparison_devices(st.session_state.user_question)
                                 if len(devices) == 2:
-                                    device1 = identify_devices(devices[0].upper())
-                                    device2 = identify_devices(devices[1].upper())
-
-                                    if device1 == "Device not available":
-                                        st.write(f"Device {devices[0]} not present in the data. Please try again!")
-                                    elif device2 == "Device not available":
-                                        st.write(f"Device {devices[1]} not present in the data. Please try again!")
-                                    else:
-                                        device1 = get_sentiment_device_name(device1)
-                                        device2 = get_sentiment_device_name(device2)
-                                        if not device1:
-                                            st.write(f"Device {devices[0]} not present in the data. Please try again!")
-                                        elif not device2:
-                                            st.write(f"Device {devices[1]} not present in the data. Please try again!")
-                                        else:
-                                            comparison_view(device1, device2)
-                                            st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
-                                            st.session_state.curr_response = ""
-
+                                    dev_comp(devices[0],devices[1])
+                                    st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
+                                    st.session_state.curr_response = ""
                                 elif len(devices) > 2:
                                     identified_devices = []
                                     for device in devices:
@@ -2954,6 +2927,13 @@ if __name__ == "__main__":
                                 save_history_devices(Gen_Ans)
                                 st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
                         st.session_state['chat_initiated'] = True
+                        
+                        print(f"Context History: {str(st.session_state.context_history_devices)}")
+                        print(f"Classification: {classification}")
+                        
+                        if st.session_state.context_history_devices and classification != "summarization":
+                            selected_questions = sugg_checkbox_devices(str(st.session_state.context_history_devices))
+                        
                     if st.session_state['chat_initiated'] and st.button("New Chat"):
                         st.session_state['messages'] = []
                         st.session_state['chat_initiated'] = False
@@ -2961,6 +2941,8 @@ if __name__ == "__main__":
                         st.session_state.display_history_devices = []
                         st.session_state.context_history_devices = []
                         st.session_state.curr_response = ""
+                        st.session_state.prompt_sugg_devices = None
+                        st.session_state.selected_sugg_devices = None
                         st.experimental_rerun()
                         
                 elif selected_options == "Summary-based":
@@ -2969,50 +2951,31 @@ if __name__ == "__main__":
                         st.session_state.context_history_devices = []
                         st.session_state.curr_response = ""
                         st.session_state.devices_approach = "Summary-based"
+                        st.session_state.selected_sugg_devices = None
+                        st.session_state.prompt_sugg_devices = None
+                        
+                    if st.session_state.selected_sugg_devices:
+                        st.session_state.user_question = st.session_state.selected_sugg_devices
+                        st.chat_message("user").markdown(st.session_state.user_question)
+                        st.session_state.display_history_devices.append({"role": "user", "content": st.session_state.user_question, "is_html": False})
+                        st.session_state.selected_sugg_devices = None
+                        st.session_state.prompt_sugg_devices = None
+                        
                     if st.session_state.user_question:   
                     #if user_question := st.chat_input("Enter the Prompt: "):
                         with st.chat_message("assistant"):
                             classification = identify_prompt_new(st.session_state.user_question)
                             if classification == 'summarization':
-                                device = identify_devices_new(st.session_state.user_question.upper())
-                                if device == "Device not available":
-                                    Gen_Ans = query_devices_detailed_generic_new(st.session_state.user_question)
-                                    st.write(Gen_Ans)
-                                    save_history_devices_new(Gen_Ans)
-                                    st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
-                                else:
-                                    device1 = get_sentiment_device_name_new(device)
-                                    if device1:
-                                        device_summarization_new(device1)
-                                        st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
-                                        st.session_state.curr_response = ""
-                                    else:
-                                        Gen_Ans = query_devices_detailed_generic_new(st.session_state.user_question)
-                                        st.write(Gen_Ans)
-                                        save_history_devices_new(Gen_Ans)
-                                        st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
+                                device = device_summ_new(st.session_state.user_question.upper())
+                                st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
+                                st.session_state.curr_response = ""
 
                             elif classification == 'comparison':
                                 devices = extract_comparison_devices_new(st.session_state.user_question)
                                 if len(devices) == 2:
-                                    device1 = identify_devices_new(devices[0].upper())
-                                    device2 = identify_devices_new(devices[1].upper())
-
-                                    if device1 == "Device not available":
-                                        st.write(f"Device {devices[0]} not present in the data. Please try again!")
-                                    elif device2 == "Device not available":
-                                        st.write(f"Device {devices[1]} not present in the data. Please try again!")
-                                    else:
-                                        device1 = get_sentiment_device_name_new(device1)
-                                        device2 = get_sentiment_device_name_new(device2)
-                                        if not device1:
-                                            st.write(f"Device {devices[0]} not present in the data. Please try again!")
-                                        elif not device2:
-                                            st.write(f"Device {devices[1]} not present in the data. Please try again!")
-                                        else:
-                                            comparison_view_new(device1, device2)
-                                            st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
-                                            st.session_state.curr_response = ""
+                                    dev_comp_new(devices[0],devices[1])
+                                    st.session_state.display_history_devices.append({"role": "assistant", "content": st.session_state.curr_response, "is_html": True})
+                                    st.session_state.curr_response = ""
 
                                 elif len(devices) > 2:
                                     identified_devices = []
@@ -3125,6 +3088,9 @@ if __name__ == "__main__":
                                 save_history_devices_new(Gen_Ans)
                                 st.session_state.display_history_devices.append({"role": "assistant", "content": Gen_Ans, "is_html": False})
                         st.session_state['chat_initiated'] = True
+                        if st.session_state.context_history_devices and classification != "summarization":
+                            selected_questions = sugg_checkbox_devices(str(st.session_state.context_history_devices))
+                    
                     if st.session_state['chat_initiated'] and st.button("New Chat"):
                         st.session_state['messages'] = []
                         st.session_state['chat_initiated'] = False
@@ -3132,4 +3098,6 @@ if __name__ == "__main__":
                         st.session_state.display_history_devices = []
                         st.session_state.context_history_devices = []
                         st.session_state.curr_response = ""
+                        st.session_state.prompt_sugg_devices = None
+                        st.session_state.selected_sugg_devices = None
                         st.experimental_rerun()
