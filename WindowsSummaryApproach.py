@@ -51,6 +51,7 @@ client = AzureOpenAI(
      azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
      )
 
+
 deployment_name='Surface_Analytics'
 azure_deployment_name = "Thruxton_R"
 azure_embedding_name ="MV_Agusta"
@@ -79,6 +80,10 @@ if not hasattr(st.session_state, 'context_history_devices'):
     st.session_state.context_history_devices = []
 if not hasattr(st.session_state, 'curr_response'):
     st.session_state.curr_response = ""
+if not hasattr(st.session_state, 'prompt_sugg_devices'):
+    st.session_state.prompt_sugg_devices = ""
+if not hasattr(st.session_state, 'selected_sugg_devices'):
+    st.session_state.selected_sugg_devices = ""
     
 def save_history_devices_new(summ):
     if not hasattr(st.session_state, 'context_history_devices'):
@@ -726,10 +731,12 @@ def query_detailed_summary_devices_new(user_question, vector_store_path="faiss_i
         docs = vector_store.similarity_search(user_question)
         response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
         return response["output_text"]
-    except:
+    except Exception as e:
         err = f"An error occurred while getting LLM response for detailed review summarization."
         print(f"Error in query_detailed_summary_devices_new() for {user_question}")
+        print(f"\n\n Error: {e}\n\n")
         return err
+
         
 def get_detailed_summary_new(device_name):
     try:
@@ -3009,3 +3016,486 @@ def generate_chart(df):
                     st.plotly_chart(bar)
     except:
         pass
+    
+    
+
+
+
+##################### New Functions for multiple devices ######################################  
+    
+def extract_devices_new(user_question):
+    try:
+        # Define the prompt template
+        prompt_template = """
+        -You are an AI tool to help identify Devices and Laptops mentioned in the user query.
+        -You will be given a user input and your job is to identify all the devices and laptops mentioned in it.
+        -Here devices means laptops from various brands.
+        -Your response should be the list of all the devices or laptops mentioned in the user input, separated by a comma.
+        -Make sure to identify all possible devices mentioned in the user prompt.
+        -The user input can have the name of any laptop, be it Microsoft laptops, Google Laptops, HP Laptops, Acer Laptops, Apple Laptops, Dell Laptops, Asus Laptops, or any other laptops.
+        -The user input can have mentions of multiple devices. Make sure you identify all of them and include then in your response.
+        -The user will either mention a very specific laptop like "Asus ROG Zephyrus G16 16", or a series of laptop like "Asus ROG" laptops. You should be able to identify the device in either case. 
+            *Just for example*: if "Asus ROG Zephyrus G16 16" is mentioned then you should reply with "Asus ROG Zephyrus G16 16". If "Asus ROG" laptops are mentioned then you should reply with "Asus ROG".
+        -Only focus on the device names or laptop names mentioned in the user input. Ignore everything else.
+        -If there are no devices mentioned in the user input, the output should be "NO DEVICES FOUND".
+        -The user input can mention laptops or devices after mentioning a laptop name, make sure you identify the laptop name only.
+        -The laptop name can also sometimes contain "Laptop" word in it, like Surface Laptop. In this case you should keep Surface Laptop as the laptop name.
+
+        **Note: Chromebook is a type of laptop.**
+
+        **IMPORTANT**: YOU ARE STRICTLY PROHIBITED FROM ANSWERING THE QUERY ABOUT WHAT USER IS ASKING. DO NOT GIVE ANY REPLY OTHER THAN LIST OF DEVICES MENTIONED IN THE USER PROMPT.
+
+        Examples:
+
+        Example Input: "What are users talking about Inspiron laptops?"
+        Example Output: "Inspiron"
+
+        Example Input: "Summarize consumer reviews of Surface Pro laptops"
+        Example Output: "Surface Pro"
+
+        Example Input: "How are the reviews of Acer Aspire 13 devices?"
+        Example Output: "Acer Aspire 13"
+
+        Example Input: "Give a summary of Apple Macbook Pro 15."
+        Example Output: "Apple Macbook Pro 15"
+
+        Example Input: "Compare Microsoft Surface Pro with Surface Laptop Go and Vivobook laptops."
+        Example Output: "Microsoft Surface Pro, Surface Laptop Go, Vivobook"
+
+        Example Input: "Do you think the HP SPECTRE X360 14 is a good choice for students?"
+        Example Output: "HP SPECTRE X360 14"
+
+        Example Input: "Do you think Chromebook is good for playing games?"
+        Example Output: "Chromebook"
+
+        **IMPORTANT**: DO NOT ANSWER THE QUESTION USER IS ASKING IN THE INPUT. REPLY WITH THE DEVICE NAMES ONLY. IF THERE IS NO DEVICE IN THE INPUT, THEN REPLY WITH "NO DEVICES FOUND". DO NOT GENERATE ANY ANSWER TO THE QUESTION USER IS ASKING FOR. ONLY REPLY WITH THE DEVICE NAME. YOU ARE STRICTLY PROHIBITED FROM ANSWERING ANY QUESTION THAT USER IS ASKING. YOU ARE ONLY ALLOWED TO REPLY WITH THE DEVICE NAMES OR "NO DEVICES FOUND".
+
+        Context:
+        {context}
+        Question:
+        {question}
+
+        Answer:
+        """
+
+
+        # Initialize the model and prompt template
+        prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+        model = AzureChatOpenAI(
+            azure_deployment=azure_deployment_name,
+            api_version='2023-12-01-preview',temperature = 0.2)
+        chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
+
+        # Get the response from the model
+        response = chain({"input_documents": [], "question": user_question}, return_only_outputs=True)
+        output = response['output_text']
+        if "NO DEVICES FOUND" in output:
+            return None
+        else:
+            return output.split(", ")
+    except:
+        print(f"Error occured in extract_devices_new() for User Query: {user_question}")
+        return None
+    
+def match_device_new(input_str):
+    try:
+        input_str = input_str.upper()
+        devices_list = list(Devices_Sentiment_Data_New['Product_Family'].unique())
+        device_matching = []
+        if devices_list:
+            for i in devices_list:
+                score = fuzz.token_set_ratio(input_str, i)
+                device_matching.append((i,score))
+            sorted_list = sorted(device_matching, key=lambda x: x[1],reverse = True)
+    #         sorted_list = [(x,y) for x,y in sorted_list if y>90]
+        else:
+            sorted_list = None
+        return sorted_list
+    except:
+        print(f"Error occured in match_device_new() for {input_str}")
+        return []
+
+
+def identify_all_devices_new(user_input):
+    try:
+        dev_ext = extract_devices_new(user_input)
+        print(f"\n\nDevice Extracted from Input: {dev_ext}")
+        identified_devices = []
+        if dev_ext:
+            for i in dev_ext:
+                out = match_device_new(i)
+                out = [x for x,y in out if y>95]
+                if out:
+                    identified_devices.append((user_input,i,out))
+        else:
+            out = match_device_new(user_input)
+            out = [x for x,y in out if y>50]
+            if out:
+                identified_devices.append((user_input,None,out))
+        return identified_devices
+    except:
+        print(f"Error occured in identify_all_devices_new() for {user_input}")
+        return []
+
+def get_net_sent_new(device_names):
+    try:
+        data = Devices_Sentiment_Data_New.loc[Devices_Sentiment_Data_New["Product_Family"].isin(device_names)]
+        net_sentiment = (data["Sentiment_Score"].sum())/(data["Review_Count"].sum())
+    except:
+        net_sentiment = None
+    try:
+        aspect_sentiment = data.groupby(["Aspect"])["Sentiment_Score"].sum()/data.groupby(["Aspect"])["Review_Count"].sum()
+    except:
+        aspect_sentiment = None
+    return net_sentiment, aspect_sentiment
+
+def get_sales_info_new(sales_device_name):
+    try:
+        sales_data = RCR_Sales_Data.loc[RCR_Sales_Data["Series"].isin(sales_device_name)]
+        asp = sales_data["Sales_Value"].sum()/sales_data["Sales_Units"].sum()
+        asp_str = "$"+str(round(asp))
+        total_sales = sales_data["Sales_Units"].sum()/1000
+        total_sales_str = str(round(total_sales))+"K"
+        hs = sales_data.groupby(["Specs_Combination"])["Sales_Units"].sum().reset_index().sort_values(by="Sales_Units",ascending = False).head(1)
+        high_specs = hs.values[0][0]
+        high_specs_sales = hs.values[0][1]/1000
+        high_specs_sales_str = str(round(high_specs_sales))+"K"
+        chassis_segment = list(sales_data["Chassis_Segment"].unique())
+        comp_data = RCR_Sales_Data.loc[(~RCR_Sales_Data["Series"].isin(sales_device_name)) & (RCR_Sales_Data["Chassis_Segment"].isin(chassis_segment))]
+        comp_data = comp_data.groupby(["Series"])["Sales_Value","Sales_Units"].sum().reset_index()
+        comp_data["Asp"] = comp_data["Sales_Value"]/comp_data["Sales_Units"]
+        comp_data = comp_data.sort_values(by = "Asp",key = lambda col: abs(col-asp)).head(3)
+        comp_data = comp_data[["Series","Asp","Sales_Units"]]
+        comp_data.columns = ["Series","CompetitorASP","Sales_Units"]
+        comp_data["Sales_Units"] = comp_data["Sales_Units"]/1000
+        
+    except:
+        print(f"Error occured in get_sales_info_new() for {sales_device_name}")
+        total_sales_str = ""
+        asp_str = ""
+        high_specs = ""
+        high_specs_sales_str = ""
+        comp_data = pd.DataFrame()
+    return total_sales_str,asp_str,high_specs,high_specs_sales_str,comp_data
+        
+
+def get_date_range_all_new(sales_device_names_list):
+    try:
+        device_sales_data = RCR_Sales_Data.loc[RCR_Sales_Data["Series"].isin(sales_device_names_list)]
+        device_sales_data['Month'] = pd.to_datetime(device_sales_data['Month'], format='%m/%d/%Y')
+        min_date = device_sales_data["Month"].min().strftime('%Y-%m-%d')
+        max_date = device_sales_data["Month"].max().strftime('%Y-%m-%d')
+    except:
+        min_date = "NA"
+        max_date = "NA"
+        print(f"Error occured in getting date range for sales data of {sales_device_names_list}")
+    return min_date, max_date
+
+def get_all_sent_dev_name_new(device_name):
+    try:
+        sentiment_device_name = dev_mapping[dev_mapping['SentimentDevice']==device_name]['SentimentDevice']
+        if len(sentiment_device_name) == 0:
+            sentiment_device_name = dev_mapping[dev_mapping['SalesDevice']==device_name]['SentimentDevice']
+        if len(sentiment_device_name) == 0:
+            sentiment_device_name = None
+        sentiment_device_name = sentiment_device_name.to_list()
+    except:
+        print(f"Error occured in get_all_sent_dev_name_new() for {device_name}")
+        sentiment_device_name = []
+    return sentiment_device_name
+
+def get_comp_dev_info_new(inp,inp_df):
+    try:
+        inp_df = inp_df.loc[inp_df["Series"]==inp]
+        oem = RCR_Sales_Data.loc[RCR_Sales_Data["Series"]==inp]["OEMGROUP"].unique()[0].upper()
+        device_name = oem+" "+inp
+        sales_device_name = inp
+        sentiment_device_names = get_all_sent_dev_name_new(sales_device_name)
+        temp, img_link = get_device_image_new(sentiment_device_names[0])
+        sales_units = str(round(inp_df["Sales_Units"].iloc[0]))+"K"
+        asp = "$"+str(round(inp_df["CompetitorASP"].iloc[0]))
+        net_sentiment, aspect_sentiment = get_net_sent_new(sentiment_device_names)
+        star_rating_html = get_star_rating_html_new(net_sentiment)
+        min_date, max_date = get_date_range_all_new([sales_device_name])
+    except:
+        print(f"Error occured in get_comp_dev_info_new() for {inp}")
+        device_name = "NA"
+        sales_device_name = "NA"
+        sentiment_device_names = []
+        img_link = "NA"
+        sales_units = "NA"
+        asp = "NA"
+        aspect_sentiment = None
+        star_rating_html = "NA"
+        min_date = None
+        max_date = None
+    return device_name, sales_device_name, sentiment_device_names, img_link, sales_units, asp, aspect_sentiment, star_rating_html, min_date, max_date
+
+def get_dev_summ_details_new(inp):
+    try:
+        devices = identify_all_devices_new(inp)
+        if not devices or len(devices) != 1:
+            #generic function
+            return None,None,None,None,None,None,None,None,None,None,None
+        dev = devices[0][1]
+        sales_device_names = []
+        sentiment_device_names = devices[0][2]
+        for i in sentiment_device_names:
+            sales_device_names.append(get_sales_device_name_new(i))
+        sales_device_names = list(set(sales_device_names))
+        if dev:
+            device_name = dev
+        else:
+            device_name = sales_device_names[0]
+        dev, img_link = get_device_image_new(sentiment_device_names[0])
+        net_sentiment, aspect_sentiment = get_net_sent_new(sentiment_device_names)
+        total_sales, asp, high_specs, sale, comp_devices = get_sales_info_new(sales_device_names)
+        star_rating_html = get_star_rating_html_new(net_sentiment)
+        min_date, max_date = get_date_range_all_new(sales_device_names)
+    except:
+        print(f"Error occured in get_dev_summ_details_new() for {inp}")
+        device_name = "NA"
+        sales_device_names = []
+        sentiment_device_names = []
+        img_link = None
+        total_sales = "NA"
+        asp =  "NA"
+        high_specs =  "NA"
+        sale =  "NA"
+        comp_devices = pd.DataFrame()
+        star_rating_html = "NA"
+        min_date = "NA"
+        max_date = "NA"
+    return device_name,sales_device_names,sentiment_device_names, img_link,total_sales, asp, high_specs, sale, comp_devices,star_rating_html,min_date, max_date
+
+def get_device_summary_new(user_input,device_name):
+    try:
+        data = query_quant_devices_new(user_input)
+        total_reviews = data.loc[data['ASPECT'] == 'TOTAL', 'REVIEW_COUNT'].iloc[0]
+        data['REVIEW_PERCENTAGE'] = data['REVIEW_COUNT'] / total_reviews * 100
+        dataframe_as_dict = data.to_dict(orient='records')
+        data_new = data
+        data_new = data_new.dropna(subset=['ASPECT_SENTIMENT'])
+        data_new = data_new[~data_new["ASPECT"].isin(["Generic", "Account", "Customer-Service", "Browser"])]
+        vmin = data_new['ASPECT_SENTIMENT'].min()
+        vmax = data_new['ASPECT_SENTIMENT'].max()
+        styled_df = data_new.style.applymap(lambda x: custom_color_gradient(x, vmin, vmax), subset=['ASPECT_SENTIMENT'])
+        data_filtered = data_new[data_new['ASPECT'] != 'TOTAL']
+        data_sorted = data_filtered.sort_values(by='REVIEW_COUNT', ascending=False)
+        top_four_aspects = data_sorted.head(4)
+        aspects_list = top_four_aspects['ASPECT'].to_list()
+        formatted_aspects = ', '.join(f"'{aspect}'" for aspect in aspects_list)
+    except:
+        dataframe_as_dict = {}
+        formatted_aspects = ""
+        aspects_list = ["Price","Software","Performance","Design"]
+        print(f"Error in get_detailed_summary_new(). Unable to generate quant data and aspects for the user input.")
+    try:
+        key_df = get_final_df_devices_new(aspects_list, device_name)
+        b =  key_df.to_dict(orient='records')
+    except:
+        b = {}
+        print(f"Error in get_detailed_summary(). Unable to generate keywords for certain aspects")
+    try:
+        su = query_detailed_summary_devices_new(user_input + ".Do this for " +  formatted_aspects +  " Aspects which have following Sentiment Scores: "+str(dataframe_as_dict)+ str(b))
+    except Exception as e:
+        su = "I don't have sufficient data to provide a complete and accurate response at this time. Please provide more details or context."
+        print(f"Error in get_detailed_summary(). Cannot generate summary for the given input.\n\nError: {e}\n\n")
+    return su
+
+def comparison_device_details_new(sent_device_list):
+    try:
+        if sent_device_list:
+            sales_devices = []
+            for i in sent_device_list:
+                sales_devices.append(get_sales_device_name_new(i))
+            sales_devices = list(set(sales_devices))
+            oem = RCR_Sales_Data.loc[RCR_Sales_Data["Series"]==sales_devices[0]]["OEMGROUP"].unique()[0].upper()
+            device_name = oem+" "+sales_devices[0]
+            dev, img_link = get_device_image_new(sent_device_list[0])
+            net_sentiment, aspect_sentiment = get_net_sent_new(sent_device_list)
+            total_sales, asp, high_specs, sale, comp_devices = get_sales_info_new(sales_devices)
+            star_rating_html = get_star_rating_html_new(net_sentiment)
+            min_date, max_date = get_date_range_all_new(sales_devices)
+            aspects = ['Performance', 'Design', 'Display', 'Battery', 'Price', 'Software']
+            asp_rating = []
+            for i in aspects:
+                asp_rating.append(get_star_rating_html_new(aspect_sentiment[i]))
+            with st.container(border = True):
+                with st.container(border = False,height = 200):
+                    col1, inter_col_space, col2 = st.columns((1, 4, 1))
+                    with inter_col_space:
+                        if img_link:
+                            image1 = load_and_resize_image_new(img_link, 150)
+                            st.image(image1)
+                        else:
+                            st.write("Image not available for this product.")
+                with st.container(height=170, border = False):
+                    st.header(device_name)
+                with st.container(height=50, border = False):
+                    st.markdown(star_rating_html, unsafe_allow_html=True)
+                with st.container(height=225, border = False):
+                    st.write(f"Total Devices Sold: {total_sales}")
+                    st.write(f"Average Selling Price: {asp}")
+                    st.write(f"Highest Selling Specs: {high_specs} - {sale}")
+                    st.markdown(f"<p style='font-size:12px;'>*sales data is from {min_date} to {max_date}</p>", unsafe_allow_html=True)
+                with st.container(height=300, border = False):
+                    st.subheader('Aspect Ratings')
+                    for aspect, stars in zip(aspects, asp_rating):
+                        st.markdown(f"{aspect}: {stars}",unsafe_allow_html=True)
+                data_1 = Devices_Sentiment_Data_New.loc[Devices_Sentiment_Data_New["Product_Family"].isin(sent_device_list)]["Review"]
+                a = device_name + "_Summary_Reviews.txt"
+                data_1.to_csv(a, sep='\t')
+                summary_1 = query_to_embedding_summarize_new("Give me the pros and cons of " + device_name, a)
+                st.write(summary_1)
+                save_history_devices_new(summary_1)
+            st.session_state.curr_response+=f"Device Name: {device_name}<br><br>"
+            if summary_1:
+                st.session_state.curr_response+=f"{summary_1}<br><br>"
+    except:
+        print(f"Error occured in comparison_device_details_new()")
+        st.write(f"Unable to generate response for the input query. Please rephrase and try again, or contact the developer of the tool.")
+
+def comparison_view_sent_devices_new(device1_list, device2_list):
+    try:
+        st.write(r"$\textsf{\Large Device Comparison}$")
+        st.session_state.curr_response+=f"Device Comparison<br><br>"
+        col1, col2 = st.columns(2)
+        with col1:
+            comparison_device_details_new(device1_list)
+        with col2:
+            comparison_device_details_new(device2_list)
+    except:
+        print(f"Error in comparison_view_sent_devices_new() for {device1_list} and {device2_list}")
+        st.write(f"Unable to generate response for the input query. Please rephrase and try again, or contact the developer of the tool.")
+
+def dev_comp_new(device1, device2):
+    try:
+        sent_devices1 = []
+        sent_devices2 = []
+        out = match_device_new(device1)
+        out = [x for x,y in out if y>95]
+        if out:
+            sent_devices1 = out
+        out = match_device_new(device2)
+        out = [x for x,y in out if y>95]
+        if out:
+            sent_devices2 = out
+        if sent_devices1 and sent_devices2:
+            comparison_view_sent_devices_new(sent_devices1,sent_devices2)
+        elif sent_devices1:
+            st.write(f"""Cannot identify "{device2}", please rephrase device name and try again.""")
+        elif sent_devices2:
+            st.write(f"""Cannot identify "{device1}", please rephrase device name and try again.""")
+        else:
+            st.write(f"""Cannot identify "{device1}" and "{device2}", please rephrase device names and try again.""")
+    except:
+        print(f"Error in dev_comp_new() for {device1} and {device2}")
+        st.write(f"Unable to generate response for the input query. Please rephrase and try again, or contact the developer of the tool.")
+    
+
+def device_summ_new(user_input):
+    try:
+        inp = user_input
+        new_inp_check = False
+        if not hasattr(st.session_state, 'selected_devices'):
+            st.session_state.selected_devices = [None,None]
+        if not hasattr(st.session_state, 'past_inp2'):
+            st.session_state.past_inp2 = None
+        if not hasattr(st.session_state, 'past_inp_comp_dev2'):
+            st.session_state.past_inp_comp_dev2 = []
+        if not hasattr(st.session_state, 'display_history_devices'):
+            st.session_state.display_history_devices = []
+        if not hasattr(st.session_state, 'context_history_devices'):
+            st.session_state.context_history_devices = []
+        if not hasattr(st.session_state, 'curr_response'):
+            st.session_state.curr_response = ""
+        if (not st.session_state.past_inp2) or (st.session_state.past_inp2[0] != inp):
+            new_inp_check = True
+            st.session_state.past_inp_comp_dev2 = []
+            device_name,sales_device_names,sentiment_device_name,img_link,total_sales, asp, high_specs, sale, comp_devices,star_rating_html,min_date, max_date = get_dev_summ_details_new(inp)
+            if not device_name:
+                return None
+        else:
+            new_inp_check = False
+            old_inp, device_name,sales_device_names,sentiment_device_name,img_link,total_sales, asp, high_specs, sale, comp_devices,star_rating_html,min_date, max_date, summ = st.session_state.past_inp2
+
+        html_code = f"""
+            <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center;">
+                <div style="flex: 1; text-align: center;">
+                    <img src="data:image/jpeg;base64,{base64.b64encode(open(img_link, "rb").read()).decode()}"  style="width: 150px; display: block; margin: 0 auto;">
+                    <p style="color: black; font-size: 18px;">{device_name.upper()}</p>
+                    <p>{star_rating_html}</p>
+                </div>
+                <div style="width: 2px; height: 150px; border-left: 2px dotted #ccc; margin: 0 20px;"></div>
+                <div style="flex: 2; color: black; font-size: 18px;">
+                    <p>Total Devices Sold: <strong>{total_sales}</strong></p>
+                    <p>Average Selling Price: <strong>{asp}</strong></p>
+                    <p>Highest Selling Specs: <strong>{high_specs}</strong> - <strong>{sale}</strong></p><br>
+                    <p style='font-size:12px;'>*sales data is from {min_date} to {max_date}</p>
+                </div>
+            </div>
+            """
+        st.markdown(html_code, unsafe_allow_html=True)
+        if new_inp_check:
+            st.session_state.curr_response+=f"{html_code}<br>"
+            summ = get_device_summary_new(inp,sales_device_names[0])
+    #         summ = "PLACEHOLDER SUMMARY"
+            st.session_state.past_inp2 = (inp, device_name,sales_device_names,sentiment_device_name,img_link,total_sales, asp, high_specs, sale, comp_devices,star_rating_html,min_date, max_date, summ)
+            st.session_state.curr_response+=f"Detailed Summary"
+            st.session_state.curr_response+=f"<br>{summ}<br>"
+
+        st.write("")
+        st.write(r"$\textsf{\Large Detailed Summary}$")
+        st.write(summ)
+        save_history_devices_new(summ)
+        st.session_state.selected_devices[0] = sentiment_device_name
+
+        if len(comp_devices):
+            st.write(r"$\textsf{\Large Compare with Similar Devices:}$")
+            col_list = [None, None, None]
+            checkbox_state = []
+            comp_devices_list = comp_devices['Series'].tolist()
+            for i in range(len(comp_devices_list)):
+                if i<3:
+                    checkbox_state.append(False)
+            col_list[0], col_list[1], col_list[2] = st.columns(3)
+            com_sent_dev_list = [None,None,None]
+            for i in range(len(comp_devices_list)):
+                if i < 3:
+                    with col_list[i]:
+                        if new_inp_check:
+                            comp_device_name, comp_sales_device_name, comp_sent_device_name,comp_img_link, comp_sales_units, comp_asp, comp_aspect_sentiment, comp_star_rating_html, comp_min_date, comp_max_date = get_comp_dev_info_new(comp_devices_list[i], comp_devices)
+                            st.session_state.past_inp_comp_dev2.append((comp_device_name, comp_sales_device_name, comp_sent_device_name, comp_img_link, comp_sales_units, comp_asp, comp_aspect_sentiment, comp_star_rating_html, comp_min_date, comp_max_date))
+                        else:
+                            comp_device_name, comp_sales_device_name, comp_sent_device_name, comp_img_link, comp_sales_units, comp_asp, comp_aspect_sentiment, comp_star_rating_html, comp_min_date, comp_max_date = st.session_state.past_inp_comp_dev2[i]
+
+                        com_sent_dev_list[i] = comp_sent_device_name
+                        with st.container(border = True, height = 320):
+                            with st.container(border = False, height = 240):
+                                html_content = f"""
+                                <div style="text-align: center; display: inline-block; ">
+                                    <img src="data:image/jpeg;base64,{base64.b64encode(open(comp_img_link, "rb").read()).decode()}" width = "80" style="margin-bottom: 10px;">
+                                    <div style="font-size: 16px; color: #333;">{comp_device_name}</div>
+                                    <div style="font-size: 14px; color: #666;">Sales: {comp_sales_units}</div>
+                                    <div style="font-size: 14px; color: #666;">Average Selling Price: {comp_asp}</div>
+                                    <p>{comp_star_rating_html}</p>
+                                    <p style='font-size:10px;'>*sales data is from {comp_min_date} to {comp_max_date}</p>
+                                </div>
+                            """
+                                st.markdown(html_content, unsafe_allow_html=True)
+
+                            checkbox_state[i] = st.checkbox("Compare",key=f"comparison_checkbox_{i}")
+
+        for i in range(len(checkbox_state)):
+            if checkbox_state[i]:
+                st.session_state.selected_devices[1] = com_sent_dev_list[i]
+                break
+            st.session_state.selected_devices[1] = None
+
+        if st.session_state.selected_devices[1]:
+            comparison_view_sent_devices_new(st.session_state.selected_devices[0],st.session_state.selected_devices[1])
+            st.session_state.selected_devices = [None, None]
+    except:
+        print(f"Error in device_summ_new() for User Query: {user_input}")
+        st.write(f"Unable to generate response for the input query. Please rephrase and try again, or contact the developer of the tool.")
